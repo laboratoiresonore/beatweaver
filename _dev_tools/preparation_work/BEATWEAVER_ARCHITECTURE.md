@@ -1,4 +1,4 @@
-# Mix Meister - Optimal Software Architecture
+# Beatweaver - Optimal Software Architecture
 
 ## Executive Summary
 
@@ -13,7 +13,7 @@
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                           MIX MEISTER                                        │
+│                             BEATWEAVER                                       │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                              │
 │   AUDIO IN                          PROCESSING                    AUDIO OUT  │
@@ -523,7 +523,7 @@ class Announcer {
 
 ```javascript
 // app.js
-class MixMeister {
+class Beatweaver {
   constructor() {
     this.analyzer = new AudioAnalyzer();
     this.synth = new SynthEngine();
@@ -629,7 +629,7 @@ class MixMeister {
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│  MIX MEISTER                                              [Settings] [Help] │
+│  BEATWEAVER                                                 [Settings] [Help] │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                              │
 │   ┌─────────────────────────────────────────────────────────────────────┐   │
@@ -692,29 +692,29 @@ class MixMeister {
 
 ## Audio Routing
 
-**CRITICAL:** The DJ's music is NOT routed through Mix Meister.
+**CRITICAL:** The DJ's music is NOT routed through Beatweaver.
 
 ```
 DJ Mixer Output ──┬──► Main PA System (unchanged)
                   │
-                  └──► Mix Meister Input (analysis only, NOT audible)
+                  └──► Beatweaver Input (analysis only, NOT audible)
 
-Mix Meister Output ──► Separate channel on DJ Mixer
+Beatweaver Output ──► Separate channel on DJ Mixer
                        OR direct to PA (mixed externally)
 ```
 
 **Why this matters:**
 1. No latency added to DJ's music
 2. DJ controls their own mix levels
-3. Mix Meister only adds sequences on top
-4. If Mix Meister crashes, DJ's music continues
+3. Beatweaver only adds sequences on top
+4. If Beatweaver crashes, DJ's music continues
 
 ---
 
 ## File Structure
 
 ```
-mix_meister/
+beatweaver/
 ├── package.json
 ├── electron/
 │   ├── main.js              # Electron main process
@@ -819,7 +819,7 @@ mix_meister/
 3. **Phrase Detection** - Auto-trigger on 8/16 bar phrases
 4. **Visual Feedback** - Waveform visualization
 5. **Recording** - Record output for later use
-6. **Network Sync** - Multiple Mix Meister instances in sync
+6. **Network Sync** - Multiple Beatweaver instances in sync
 7. **DJ Software Integration** - Direct Rekordbox/Traktor BPM feed
 
 ---
@@ -844,4 +844,4 @@ mix_meister/
 
 ---
 
-*Architecture document for Mix Meister - January 2026*
+*Architecture document for Beatweaver - January 2026*

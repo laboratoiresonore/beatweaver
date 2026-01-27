@@ -104,7 +104,7 @@ navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
 });
 ```
 
-**Use case:** Build a custom BPM detector directly into Mix Meister.
+**Use case:** Build a custom BPM detector directly into Beatweaver.
 
 ---
 
@@ -828,7 +828,7 @@ Ports:
 
 **Implementation:**
 ```javascript
-// In Mix Meister
+// In Beatweaver
 import { RealTimeBPMAnalyzer } from 'realtime-bpm-analyzer';
 
 const analyzer = new RealTimeBPMAnalyzer();
@@ -949,4 +949,4 @@ $: ccTrigger(38) ? s("hh*8") : silence
 
 ---
 
-*Document generated for Mix Meister project - January 2026*
+*Document generated for Beatweaver project - January 2026*
