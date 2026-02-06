@@ -305,3 +305,22 @@ body {
 .announcement-toast {
   text-shadow: 0 0 10px var(--color-accent);
 }
+
+/* VU Meter styles */
+.vu-bar {
+  background-color: var(--color-border);
+  min-height: 2px;
+  will-change: height, background-color;
+}
+
+/* VU meter container glow when active */
+.vu-meter-active {
+  filter: drop-shadow(0 0 4px var(--color-accent));
+}
+
+/* CSS variables for VU meter theming */
+:root {
+  --dj-success: #22c55e;
+  --dj-warning: #f59e0b;
+  --dj-error: #ef4444;
+}

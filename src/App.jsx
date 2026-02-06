@@ -5,6 +5,7 @@ import { PresetGrid } from './ui/PresetGrid.jsx';
 import { ListenControls } from './ui/ListenControls.jsx';
 import { MidiStatus } from './ui/MidiStatus.jsx';
 import { MasterControls } from './ui/MasterControls.jsx';
+import { VuMeter, VuMeterInline } from './ui/VuMeter.jsx';
 
 /**
  * ErrorBoundary - Catches React render errors to prevent black screen crashes
@@ -646,8 +647,8 @@ function BeatweaverApp() {
   if (!initialized) {
     return (
       <div className="h-screen flex flex-col items-center justify-center bg-dj-bg">
-        <div className="logo-container mb-4 px-4 py-2">
-          <img src="./animation.gif" alt="" className="logo-animation logo-animation--idle" />
+        <div className="logo-container mb-4 px-4 py-2 flex flex-col items-center">
+          <VuMeter bars={12} width={120} height={50} className="mb-2 opacity-30" />
           <h1 className="text-5xl font-bold logo-text">BEATWEAVER</h1>
         </div>
         <p className="text-dj-muted mb-2">Auto-detect BPM and Key from audio</p>
@@ -670,15 +671,16 @@ function BeatweaverApp() {
     <div className="h-screen flex flex-col bg-dj-bg p-4 overflow-hidden">
       {/* Top Bar - Controls */}
       <div className="flex items-center gap-4 mb-4 px-2">
-        {/* Logo */}
+        {/* Logo + VU Meter */}
         <div
-          className="logo-container px-3 py-1 cursor-pointer"
+          className="logo-container px-3 py-1 cursor-pointer flex items-center gap-2"
           onClick={() => { try { bw.current?.announcer.announce('Beatweaver', true); } catch { /* ignore */ } }}
         >
-          <img
-            src="./animation.gif"
-            alt=""
-            className={`logo-animation ${activePresets.size > 0 ? 'logo-animation--active' : 'logo-animation--idle'}`}
+          <VuMeter
+            bars={8}
+            width={60}
+            height={32}
+            className={activePresets.size > 0 ? 'opacity-100' : 'opacity-40'}
           />
           <h1 className={`text-xl font-bold logo-text ${activePresets.size > 0 ? 'logo-text--cycling' : ''}`}>
             BEATWEAVER
