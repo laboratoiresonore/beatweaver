@@ -31,10 +31,10 @@ export function MasterControls({ values, onChange }) {
       {/* Toggle button */}
       <button
         onClick={() => setExpanded(!expanded)}
-        className={`px-2 py-1 rounded text-[10px] font-bold transition-all ${
+        className={`px-2 py-1 rounded text-[10px] font-bold font-display tracking-wider transition-all ${
           expanded
             ? 'bg-dj-surface border border-dj-accent text-dj-accent'
-            : 'bg-dj-surface border border-dj-border text-dj-muted hover:text-white hover:border-dj-muted'
+            : 'bg-dj-surface border border-dj-border-strong text-dj-muted hover:text-dj-accent hover:border-dj-accent transition-colors'
         }`}
         title="Master controls"
       >
@@ -43,7 +43,7 @@ export function MasterControls({ values, onChange }) {
 
       {/* Panel */}
       {expanded && (
-        <div className="absolute right-0 top-full mt-1 z-50 bg-dj-surface border border-dj-border rounded-lg p-3 shadow-lg min-w-[220px]">
+        <div className="absolute right-0 top-full mt-1 z-50 bg-dj-surface border border-dj-border rounded-lg p-3 shadow-xl min-w-[220px]" style={{ boxShadow: '0 4px 24px rgba(0, 0, 0, 0.5), 0 0 1px rgba(80, 180, 255, 0.1)' }}>
           {/* Volumes section */}
           <div className="mb-3">
             <span className="text-[9px] text-dj-muted uppercase tracking-wider">Volumes</span>
@@ -94,7 +94,7 @@ export function MasterControls({ values, onChange }) {
 function SliderRow({ label, value, min, max, step, format, onChange }) {
   return (
     <div className="flex items-center gap-2">
-      <span className="text-[9px] text-dj-muted w-10 text-right uppercase">{label}</span>
+      <span className="text-[9px] text-dj-muted w-10 text-right uppercase tracking-wider">{label}</span>
       <input
         type="range"
         min={min}

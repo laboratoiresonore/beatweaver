@@ -41,8 +41,8 @@ export function SparkEffect({ active, color = '#00ff88', buttonRef }) {
     const rect = buttonRef.current.getBoundingClientRect();
     const burstSparks = [];
 
-    // Create sparks bursting from LEFT side
-    const leftCount = 15 + Math.floor(Math.random() * 5);
+    // Create sparks bursting from LEFT side (fewer, faster)
+    const leftCount = 8 + Math.floor(Math.random() * 4);
     for (let i = 0; i < leftCount; i++) {
       const y = (i / leftCount) * rect.height + Math.random() * 10 - 5;
       const speed = 1.5 + Math.random() * 1.5;
@@ -56,14 +56,14 @@ export function SparkEffect({ active, color = '#00ff88', buttonRef }) {
         color: Math.random() > 0.3 ? color : '#ffffff',
         opacity: 1,
         life: 1,
-        decay: 0.03 + Math.random() * 0.02,
+        decay: 0.05 + Math.random() * 0.03,
         type: 'burst',
         gravity: 0.02,
       });
     }
 
-    // Create sparks bursting from RIGHT side
-    const rightCount = 15 + Math.floor(Math.random() * 5);
+    // Create sparks bursting from RIGHT side (fewer, faster)
+    const rightCount = 8 + Math.floor(Math.random() * 4);
     for (let i = 0; i < rightCount; i++) {
       const y = (i / rightCount) * rect.height + Math.random() * 10 - 5;
       const speed = 1.5 + Math.random() * 1.5;
@@ -77,7 +77,7 @@ export function SparkEffect({ active, color = '#00ff88', buttonRef }) {
         color: Math.random() > 0.3 ? color : '#ffffff',
         opacity: 1,
         life: 1,
-        decay: 0.03 + Math.random() * 0.02,
+        decay: 0.05 + Math.random() * 0.03,
         type: 'burst',
         gravity: 0.02,
       });

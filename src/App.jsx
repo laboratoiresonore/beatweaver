@@ -5,7 +5,7 @@ import { PresetGrid } from './ui/PresetGrid.jsx';
 import { ListenControls } from './ui/ListenControls.jsx';
 import { MidiStatus } from './ui/MidiStatus.jsx';
 import { MasterControls } from './ui/MasterControls.jsx';
-import { VuMeter, VuMeterInline } from './ui/VuMeter.jsx';
+import { VuMeter, VuMeterInline, WaveformDisplay } from './ui/VuMeter.jsx';
 
 /**
  * ErrorBoundary - Catches React render errors to prevent black screen crashes
@@ -32,7 +32,7 @@ class ErrorBoundary extends Component {
           <p className="text-dj-muted mb-4">{this.state.error?.message || 'An unexpected error occurred'}</p>
           <button
             onClick={() => { this.setState({ hasError: false, error: null }); window.location.reload(); }}
-            className="px-4 py-2 bg-dj-accent text-black font-bold rounded hover:bg-dj-accent-hover"
+            className="px-4 py-2 bg-dj-accent text-black font-bold font-display rounded hover:brightness-110"
           >
             Reload App
           </button>
@@ -646,24 +646,26 @@ function BeatweaverApp() {
 
   if (!initialized) {
     return (
-      <div className="h-screen flex flex-col items-center justify-center bg-dj-bg">
-        <div className="logo-container mb-4 px-8 py-4 relative overflow-hidden rounded-xl">
-          {/* VU meter as full background */}
+      <div className="h-screen flex flex-col items-center justify-center startup-bg">
+        <div className="logo-container mb-6 px-10 py-5 relative overflow-hidden rounded-xl">
+          {/* Waveform as full background */}
           <div className="absolute inset-0 flex items-end justify-center">
-            <VuMeter bars={24} width={320} height={70} className="opacity-20" />
+            <WaveformDisplay bars={32} width={380} height={80} className="opacity-15" />
           </div>
           {/* Text overlay */}
-          <h1 className="relative z-10 text-5xl font-bold logo-text">BEATWEAVER</h1>
+          <h1 className="relative z-10 text-5xl font-extrabold logo-text">BEATWEAVER</h1>
         </div>
-        <p className="text-dj-muted mb-2">Auto-detect BPM and Key from audio</p>
-        <p className="text-dj-muted text-xs mb-6">
+        <p className="text-dj-text-secondary mb-2 text-sm tracking-wide">Auto-detect BPM and Key from audio</p>
+        <p className="text-dj-muted text-xs mb-8 tracking-wider">
           Keys 1-8: presets | Space: stop all | MIDI: Launch Control XL
         </p>
         <button onClick={handleCountdownClick} className="start-button">
-          {countdown !== null && countdown > 0 ? countdown : 'START AUDIO'}
+          {countdown !== null && countdown > 0 ? (
+            <span className="font-display">{countdown}</span>
+          ) : 'START AUDIO'}
         </button>
         {countdown !== null && countdown > 0 && (
-          <p className="text-dj-muted text-xs mt-2">Click to start now</p>
+          <p className="text-dj-muted text-xs mt-3">Click to start now</p>
         )}
       </div>
     );
@@ -674,23 +676,23 @@ function BeatweaverApp() {
   return (
     <div className="h-screen flex flex-col bg-dj-bg p-4 overflow-hidden">
       {/* Top Bar - Controls */}
-      <div className="flex items-center gap-4 mb-4 px-2">
-        {/* Logo + VU Meter Background */}
+      <div className="top-bar-panel flex items-center gap-4 mb-4 px-3 py-2 rounded-lg">
+        {/* Logo + Waveform Background */}
         <div
           className="logo-container relative px-4 py-2 cursor-pointer overflow-hidden rounded-lg"
           onClick={() => { try { bw.current?.announcer.announce('Beatweaver', true); } catch { /* ignore */ } }}
         >
-          {/* VU meter as full background */}
+          {/* Waveform as full background */}
           <div className="absolute inset-0 flex items-end justify-center">
-            <VuMeter
-              bars={16}
-              width={180}
-              height={40}
-              className={activePresets.size > 0 ? 'opacity-60' : 'opacity-20'}
+            <WaveformDisplay
+              bars={20}
+              width={200}
+              height={42}
+              className={activePresets.size > 0 ? 'opacity-50' : 'opacity-15'}
             />
           </div>
           {/* Text overlay */}
-          <h1 className={`relative z-10 text-xl font-bold logo-text ${activePresets.size > 0 ? 'logo-text--cycling' : ''}`}>
+          <h1 className={`relative z-10 text-xl font-extrabold logo-text ${activePresets.size > 0 ? 'logo-text--active' : ''}`}>
             BEATWEAVER
           </h1>
         </div>
@@ -735,16 +737,16 @@ function BeatweaverApp() {
 
         {/* Inline Announcement Display */}
         {announcement && (
-          <div className="announcement-inline px-4 py-1.5 bg-dj-surface border border-dj-accent rounded-lg text-sm font-bold text-dj-accent animate-announcement whitespace-nowrap shadow-lg shadow-dj-accent/20">
+          <div className="px-4 py-1.5 bg-dj-surface border border-dj-accent/40 rounded-lg text-sm font-bold font-display text-dj-accent animate-announcement whitespace-nowrap shadow-lg shadow-dj-accent/10">
             {announcement}
           </div>
         )}
 
         {/* Analysis Status */}
         {analyzing && !bpmLocked && !keyLocked && (
-          <div className="text-xs text-dj-muted">
+          <div className="text-xs text-dj-text-secondary font-display tracking-wide">
             {detectedBpm ? `BPM: ~${detectedBpm}` : 'Detecting BPM...'}
-            {' | '}
+            <span className="text-dj-muted mx-1">|</span>
             {detectedKey ? `Key: ~${detectedKey}` : 'Detecting Key...'}
           </div>
         )}
@@ -783,7 +785,7 @@ function BeatweaverApp() {
         <div className="w-px h-8 bg-dj-border" />
 
         {/* Active count */}
-        <div className={`text-lg font-bold ${activePresets.size > 0 ? 'text-dj-accent' : 'text-dj-muted'}`}>
+        <div className={`text-lg font-bold font-display tracking-wide ${activePresets.size > 0 ? 'text-dj-accent' : 'text-dj-muted'}`}>
           {activePresets.size > 0 ? `${activePresets.size} ACTIVE` : 'READY'}
         </div>
 
@@ -791,11 +793,12 @@ function BeatweaverApp() {
         <button
           onClick={stopAll}
           disabled={activePresets.size === 0}
-          className={`px-6 py-2 rounded font-bold text-sm transition-all ${
+          className={`px-6 py-2 rounded font-bold text-sm font-display tracking-wider transition-all ${
             activePresets.size > 0
-              ? 'bg-dj-error hover:bg-opacity-80'
+              ? 'bg-dj-error hover:brightness-110 text-white'
               : 'bg-dj-border text-dj-muted cursor-not-allowed'
           }`}
+          style={activePresets.size > 0 ? { boxShadow: '0 0 12px rgba(230, 40, 40, 0.25)' } : {}}
         >
           STOP ALL
         </button>

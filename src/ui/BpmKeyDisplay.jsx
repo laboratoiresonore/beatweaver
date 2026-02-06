@@ -139,20 +139,20 @@ export function BpmKeyDisplay({
           onTouchStart={bpmLocked ? undefined : minusHold.start}
           onTouchEnd={minusHold.stop}
           disabled={bpmLocked}
-          className={`w-8 h-8 rounded text-lg font-bold transition-colors select-none ${
+          className={`w-8 h-8 rounded text-lg font-bold font-display transition-colors select-none ${
             bpmLocked
               ? 'bg-dj-surface text-dj-muted cursor-not-allowed'
-              : 'bg-dj-surface border border-dj-border text-white hover:border-dj-accent hover:text-dj-accent active:bg-dj-accent active:text-black'
+              : 'bg-dj-surface border border-dj-border-strong text-dj-text hover:border-dj-accent hover:text-dj-accent active:bg-dj-accent active:text-black'
           }`}
         >
           −
         </button>
 
         <div className="flex flex-col items-center min-w-[70px]">
-          <span className={`text-3xl font-bold tabular-nums ${bpmLocked ? 'text-green-400' : ''}`}>
+          <span className={`text-3xl font-bold font-display ${bpmLocked ? 'text-dj-accent' : 'text-dj-text'}`}>
             {Number(bpm).toFixed(1)}
           </span>
-          <span className={`text-[10px] uppercase ${bpmLocked ? 'text-green-400' : 'text-dj-muted'}`}>
+          <span className={`text-[10px] uppercase tracking-wider ${bpmLocked ? 'text-dj-accent' : 'text-dj-muted'}`}>
             {bpmLocked ? 'BPM LOCKED' : 'BPM'}
           </span>
         </div>
@@ -165,10 +165,10 @@ export function BpmKeyDisplay({
           onTouchStart={bpmLocked ? undefined : plusHold.start}
           onTouchEnd={plusHold.stop}
           disabled={bpmLocked}
-          className={`w-8 h-8 rounded text-lg font-bold transition-colors select-none ${
+          className={`w-8 h-8 rounded text-lg font-bold font-display transition-colors select-none ${
             bpmLocked
               ? 'bg-dj-surface text-dj-muted cursor-not-allowed'
-              : 'bg-dj-surface border border-dj-border text-white hover:border-dj-accent hover:text-dj-accent active:bg-dj-accent active:text-black'
+              : 'bg-dj-surface border border-dj-border-strong text-dj-text hover:border-dj-accent hover:text-dj-accent active:bg-dj-accent active:text-black'
           }`}
         >
           +
@@ -177,7 +177,7 @@ export function BpmKeyDisplay({
         {bpmLocked && (
           <button
             onClick={onUnlockBpm}
-            className="px-2 py-1 rounded text-[10px] font-bold bg-dj-surface border border-dj-border hover:border-dj-muted"
+            className="px-2 py-1 rounded text-[10px] font-bold font-display tracking-wider bg-dj-surface border border-dj-accent/30 text-dj-accent/70 hover:border-dj-accent hover:text-dj-accent transition-colors"
           >
             UNLOCK
           </button>
@@ -191,12 +191,12 @@ export function BpmKeyDisplay({
       <div className="flex items-center gap-2">
         <div className="flex flex-col items-center min-w-[50px]">
           <span
-            className="text-3xl font-bold"
-            style={{ color: keyLocked ? getKeyColor(detectedKey || currentKey) : getKeyColor(detectedKey || currentKey) }}
+            className="text-3xl font-bold font-display"
+            style={{ color: getKeyColor(detectedKey || currentKey) }}
           >
             {detectedKey || currentKey}
           </span>
-          <span className={`text-[10px] uppercase ${keyLocked ? 'text-green-400' : 'text-dj-muted'}`}>
+          <span className={`text-[10px] uppercase tracking-wider ${keyLocked ? 'text-dj-accent' : 'text-dj-muted'}`}>
             {keyLocked ? 'KEY LOCKED' : 'KEY'}
           </span>
         </div>
@@ -214,7 +214,7 @@ export function BpmKeyDisplay({
         {keyLocked && (
           <button
             onClick={onUnlockKey}
-            className="px-2 py-1 rounded text-[10px] font-bold bg-dj-surface border border-dj-border hover:border-dj-muted"
+            className="px-2 py-1 rounded text-[10px] font-bold font-display tracking-wider bg-dj-surface border border-dj-accent/30 text-dj-accent/70 hover:border-dj-accent hover:text-dj-accent transition-colors"
           >
             UNLOCK
           </button>
