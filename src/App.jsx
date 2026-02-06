@@ -5,7 +5,9 @@ import { PresetGrid } from './ui/PresetGrid.jsx';
 import { ListenControls } from './ui/ListenControls.jsx';
 import { MidiStatus } from './ui/MidiStatus.jsx';
 import { MasterControls } from './ui/MasterControls.jsx';
-import { VuMeter, VuMeterInline, WaveformDisplay } from './ui/VuMeter.jsx';
+import { VuMeter, VuMeterInline, WaveformDisplay, MasterVuStrip, WaveformTimeline } from './ui/VuMeter.jsx';
+import { MidiMirror } from './ui/MidiMirror.jsx';
+import { PRESETS } from './presets/index.js';
 
 /**
  * ErrorBoundary - Catches React render errors to prevent black screen crashes
@@ -106,6 +108,13 @@ function BeatweaverApp() {
   const [announcement, setAnnouncement] = useState(null);
   const announcementTimer = useRef(null);
 
+  // Theme state
+  const [darkerTheme, setDarkerTheme] = useState(false);
+
+  // Preset history tracking (colored blocks showing activations over time)
+  const [presetHistory, setPresetHistory] = useState([]);
+  const MAX_HISTORY = 60;
+
   const bw = useRef(null);
 
   // Wire orchestrator callbacks
@@ -160,6 +169,18 @@ function BeatweaverApp() {
     // Preset changes (from MIDI buttons)
     beatweaver.onActivePresetsChange = (presets) => {
       setActivePresets(new Set(presets));
+      // Track history: record current active state as a history block
+      if (presets.length > 0) {
+        setPresetHistory(prev => {
+          const colors = presets.map(id => {
+            const p = PRESETS[id];
+            return p ? p.color : '#50B4FF';
+          });
+          const entry = { colors, time: Date.now() };
+          const next = [...prev, entry];
+          return next.length > MAX_HISTORY ? next.slice(-MAX_HISTORY) : next;
+        });
+      }
     };
 
     // Phase 4: Ready presets (MIDI-selected, waiting to fire)
@@ -674,7 +695,7 @@ function BeatweaverApp() {
   // ============ MAIN INTERFACE ============
 
   return (
-    <div className="h-screen flex flex-col bg-dj-bg p-4 overflow-hidden">
+    <div className={`h-screen flex flex-col bg-dj-bg p-4 overflow-hidden ${darkerTheme ? 'theme-darker' : ''}`}>
       {/* Top Bar - Controls */}
       <div className="top-bar-panel flex items-center gap-4 mb-4 px-3 py-2 rounded-lg">
         {/* Logo + Waveform Background */}
@@ -692,7 +713,7 @@ function BeatweaverApp() {
             />
           </div>
           {/* Text overlay */}
-          <h1 className={`relative z-10 text-xl font-extrabold logo-text ${activePresets.size > 0 ? 'logo-text--active' : ''}`}>
+          <h1 className={`relative z-10 text-xl font-extrabold logo-text ${activePresets.size > 0 ? 'logo-text--active' : ''} ${beatFlash && activePresets.size > 0 ? 'logo-beat-flash' : ''}`}>
             BEATWEAVER
           </h1>
         </div>
@@ -784,6 +805,25 @@ function BeatweaverApp() {
         {/* Divider */}
         <div className="w-px h-8 bg-dj-border" />
 
+        {/* Theme toggle */}
+        <button
+          onClick={() => setDarkerTheme(prev => !prev)}
+          className={`px-2 py-1 rounded text-[10px] font-bold font-display tracking-wider transition-all ${
+            darkerTheme
+              ? 'bg-dj-surface border border-dj-accent/40 text-dj-accent'
+              : 'bg-dj-surface border border-dj-border-strong text-dj-muted hover:text-dj-text-secondary'
+          }`}
+          title={darkerTheme ? 'Switch to normal theme' : 'Switch to darker theme'}
+        >
+          {darkerTheme ? 'DARKER' : 'DARK'}
+        </button>
+
+        {/* MIDI Mirror */}
+        <MidiMirror
+          midiController={bw.current?.midiController}
+          connected={midiConnected}
+        />
+
         {/* Active count */}
         <div className={`text-lg font-bold font-display tracking-wide ${activePresets.size > 0 ? 'text-dj-accent' : 'text-dj-muted'}`}>
           {activePresets.size > 0 ? `${activePresets.size} ACTIVE` : 'READY'}
@@ -810,6 +850,34 @@ function BeatweaverApp() {
         readyPresets={readyPresets}
         onTogglePreset={togglePreset}
       />
+
+      {/* Bottom Visualization Strip */}
+      <div className="flex flex-col gap-1 mt-2">
+        {/* Preset History Timeline */}
+        {presetHistory.length > 0 && (
+          <div className="preset-history-strip" title="Preset activation history">
+            {presetHistory.map((entry, i) => (
+              <div
+                key={i}
+                className="preset-history-block"
+                style={{
+                  flex: 1,
+                  background: entry.colors.length > 1
+                    ? `linear-gradient(to right, ${entry.colors.join(', ')})`
+                    : entry.colors[0] || '#50B4FF',
+                  opacity: 0.4 + (i / presetHistory.length) * 0.6,
+                }}
+              />
+            ))}
+          </div>
+        )}
+
+        {/* Waveform Timeline (30s scrolling) */}
+        <WaveformTimeline height={28} className="rounded opacity-70" />
+
+        {/* Master VU Strip */}
+        <MasterVuStrip className="rounded" />
+      </div>
     </div>
   );
 }

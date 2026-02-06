@@ -5,13 +5,57 @@
  */
 
 import { useMemo, useRef, useState, useEffect } from 'react';
-import { getPresetsByCategoryAndBank, CATEGORY_COLORS } from '../presets/index.js';
+import { getPresetsByCategoryAndBank, CATEGORY_COLORS, PATTERNS } from '../presets/index.js';
 import { SparkEffect } from './SparkEffect.jsx';
+
+// Mini VU meter (simulated) - shows animated bars when column is active
+function ColumnVuMini({ active, color }) {
+  if (!active) return null;
+  return (
+    <div className="column-vu-mini">
+      {[1, 2, 3, 4].map(i => (
+        <div
+          key={i}
+          className={`column-vu-bar animate-vu-sim-${i}`}
+          style={{ backgroundColor: color, opacity: 0.7 }}
+        />
+      ))}
+    </div>
+  );
+}
+
+// Pattern preview dots shown on hover
+function PatternPreview({ patternName, visible }) {
+  const pattern = PATTERNS[patternName];
+  if (!pattern || !pattern.notes) return null;
+
+  const notes = pattern.notes;
+  const maxNote = 8; // Show up to 8 steps
+  const displayNotes = notes.slice(0, maxNote);
+
+  return (
+    <div className={`pattern-preview ${visible ? 'pattern-preview--visible' : ''}`}>
+      {displayNotes.map((note, i) => {
+        const isRest = note === null || note === undefined;
+        const isChord = Array.isArray(note);
+        const height = isRest ? 2 : isChord ? 8 : 5;
+        return (
+          <div
+            key={i}
+            className={`pattern-dot ${isRest ? 'pattern-dot--rest' : ''}`}
+            style={{ height }}
+          />
+        );
+      })}
+    </div>
+  );
+}
 
 // Diagonal half-button (used in DoublePresetButton)
 // NOTE: SparkEffect is rendered in parent DoublePresetButton to avoid clip-path clipping
 function DiagonalButton({ preset, isActive, isReady, onToggle, position }) {
   const [wobbling, setWobbling] = useState(false);
+  const [hovered, setHovered] = useState(false);
   const wasActiveRef = useRef(isActive);
 
   // Trigger wobble when button becomes active (works for both click and MIDI)
@@ -51,6 +95,8 @@ function DiagonalButton({ preset, isActive, isReady, onToggle, position }) {
   return (
     <button
       onClick={handleClick}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
       className={`
         absolute inset-0 transition-all duration-75
         ${isActive ? 'z-20' : 'z-10 hover:z-15'}
@@ -62,6 +108,10 @@ function DiagonalButton({ preset, isActive, isReady, onToggle, position }) {
         boxShadow: isActive ? `inset 0 0 20px rgba(0, 0, 0, 0.3)` : 'none',
       }}
     >
+      {/* Pattern preview on hover */}
+      {!isActive && preset.pattern && (
+        <PatternPreview patternName={preset.pattern} visible={hovered} />
+      )}
       <span
         className={`
           absolute font-bold text-xs whitespace-nowrap font-display tracking-wide
@@ -167,8 +217,15 @@ export function PresetGrid({ activePresets, readyPresets, onTogglePreset }) {
       {Object.entries(pairedPresetsByCategory).map(([category, pairs]) => (
         <div
           key={category}
-          className="flex flex-col min-h-0 bg-dj-surface rounded-lg border border-dj-border overflow-hidden"
-          style={{ boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.02)' }}
+          className="flex flex-col min-h-0 bg-dj-surface rounded-lg border overflow-hidden transition-all duration-200"
+          style={{
+            boxShadow: getActiveCount(category) > 0
+              ? `inset 0 1px 0 rgba(255, 255, 255, 0.02), 0 0 15px ${CATEGORY_COLORS[category]}30, inset 0 0 20px ${CATEGORY_COLORS[category]}08`
+              : 'inset 0 1px 0 rgba(255, 255, 255, 0.02)',
+            borderColor: getActiveCount(category) > 0
+              ? CATEGORY_COLORS[category] + '50'
+              : 'var(--color-border)',
+          }}
         >
           {/* Category header */}
           <div
@@ -185,6 +242,9 @@ export function PresetGrid({ activePresets, readyPresets, onTogglePreset }) {
                 {getActiveCount(category)}
               </span>
             )}
+            {/* Mini VU meter */}
+            <div className="flex-grow" />
+            <ColumnVuMini active={getActiveCount(category) > 0} color={CATEGORY_COLORS[category]} />
           </div>
 
           {/* Double preset cells */}

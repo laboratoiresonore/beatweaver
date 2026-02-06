@@ -51,6 +51,49 @@ function getKeyColor(key) {
   return KEY_COLORS[key] || '#ffffff';
 }
 
+// SVG confidence ring - fills arc based on confidence value
+function ConfidenceRing({ confidence = 0, locked = false, size = 56, strokeWidth = 2 }) {
+  const radius = (size - strokeWidth) / 2;
+  const circumference = 2 * Math.PI * radius;
+  const dashOffset = circumference * (1 - confidence);
+  const color = locked ? '#00C853' : confidence > 0.6 ? '#50B4FF' : confidence > 0.3 ? '#FFA600' : '#E62828';
+
+  return (
+    <svg
+      className="confidence-ring"
+      width={size}
+      height={size}
+      viewBox={`0 0 ${size} ${size}`}
+    >
+      {/* Background track */}
+      <circle
+        cx={size / 2}
+        cy={size / 2}
+        r={radius}
+        stroke="rgba(255, 255, 255, 0.06)"
+        strokeWidth={strokeWidth}
+      />
+      {/* Confidence fill arc */}
+      {confidence > 0 && (
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          stroke={color}
+          strokeWidth={strokeWidth}
+          strokeDasharray={circumference}
+          strokeDashoffset={dashOffset}
+          transform={`rotate(-90 ${size / 2} ${size / 2})`}
+          style={{
+            transition: 'stroke-dashoffset 0.3s ease, stroke 0.3s ease',
+            filter: locked ? `drop-shadow(0 0 3px ${color})` : 'none',
+          }}
+        />
+      )}
+    </svg>
+  );
+}
+
 // Hook for hold-to-repeat button behavior with acceleration
 function useHoldRepeat(callback, initialDelay = 250) {
   const intervalRef = useRef(null);
@@ -148,7 +191,8 @@ export function BpmKeyDisplay({
           −
         </button>
 
-        <div className="flex flex-col items-center min-w-[70px]">
+        <div className="relative flex flex-col items-center min-w-[70px]">
+          <ConfidenceRing confidence={bpmConfidence} locked={bpmLocked} size={56} />
           <span className={`text-3xl font-bold font-display ${bpmLocked ? 'text-dj-accent' : 'text-dj-text'}`}>
             {Number(bpm).toFixed(1)}
           </span>
@@ -189,7 +233,8 @@ export function BpmKeyDisplay({
 
       {/* Key Display */}
       <div className="flex items-center gap-2">
-        <div className="flex flex-col items-center min-w-[50px]">
+        <div className="relative flex flex-col items-center min-w-[50px]">
+          <ConfidenceRing confidence={keyConfidence} locked={keyLocked} size={56} />
           <span
             className="text-3xl font-bold font-display"
             style={{ color: getKeyColor(detectedKey || currentKey) }}
