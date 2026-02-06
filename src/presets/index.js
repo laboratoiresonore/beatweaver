@@ -475,9 +475,17 @@ export const PRESETS = {
     category: 'TEXTURE',
     bank: 'A',
     instrument: 'perc',
+    instrumentType: 'perc',
+    synthOptions: {
+      volume: 0,          // 0dB base - much louder than default -14dB
+      attack: 0.001,
+      decay: 0.08,
+      sustain: 0,
+      release: 0.1
+    },
     pattern: 'PERC_16TH',
     controls: {
-      POWER: { param: 'volume', default: 0.3, min: 0, max: 1 },
+      POWER: { param: 'volume', default: 0.7, min: 0, max: 1 },
       GRIT: { param: 'filterFreq', default: 0.5, min: 0, max: 1 }
     },
     color: '#a855f7',

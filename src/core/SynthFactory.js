@@ -387,6 +387,98 @@ export function createKickSynth(masterGain, options = {}) {
 }
 
 /**
+ * Create Perc Synth - Punchy rhythmic percussion
+ * Louder and punchier than basic synth, great for driving rhythms
+ */
+export function createPercSynth(masterGain, options = {}) {
+  const {
+    volume = 0,           // 0dB base - LOUD
+    attack = 0.001,
+    decay = 0.08,
+    sustain = 0,
+    release = 0.1,
+    frequency = 800,      // Higher frequency for click/snap
+    filterFreq = 4000
+  } = options;
+
+  const channel = new Tone.Channel({ volume, pan: 0 }).connect(masterGain);
+  const fadeGain = new Tone.Gain(1).connect(channel);
+
+  // Compressor for punch
+  const compressor = new Tone.Compressor({
+    threshold: -20,
+    ratio: 4,
+    attack: 0.003,
+    release: 0.1
+  }).connect(fadeGain);
+
+  // Subtle saturation for grit
+  const distortion = new Tone.Distortion({
+    distortion: 0.15,
+    wet: 0.3
+  }).connect(compressor);
+
+  // Filter for tone shaping
+  const filter = new Tone.Filter({
+    frequency: filterFreq,
+    type: 'lowpass',
+    Q: 2
+  }).connect(distortion);
+
+  // Noise synth for percussive attack
+  const noiseSynth = new Tone.NoiseSynth({
+    noise: { type: 'white' },
+    envelope: {
+      attack: attack,
+      decay: decay * 0.5,
+      sustain: 0,
+      release: release * 0.5
+    }
+  }).connect(filter);
+
+  // Tonal click
+  const tonalSynth = new Tone.Synth({
+    oscillator: { type: 'triangle' },
+    envelope: {
+      attack: attack,
+      decay: decay,
+      sustain: sustain,
+      release: release
+    }
+  }).connect(filter);
+
+  // Combined trigger
+  const combinedSynth = {
+    triggerAttackRelease: (note, duration, time) => {
+      noiseSynth.triggerAttackRelease(duration, time);
+      tonalSynth.triggerAttackRelease(note, duration, time);
+    },
+    triggerAttack: (note, time) => {
+      noiseSynth.triggerAttack(time);
+      tonalSynth.triggerAttack(note, time);
+    },
+    triggerRelease: (time) => {
+      noiseSynth.triggerRelease(time);
+      tonalSynth.triggerRelease(time);
+    },
+    dispose: () => {
+      noiseSynth.dispose();
+      tonalSynth.dispose();
+      filter.dispose();
+      distortion.dispose();
+      compressor.dispose();
+      fadeGain.dispose();
+      channel.dispose();
+    },
+    _channel: channel,
+    _fadeGain: fadeGain,
+    type: 'perc'
+  };
+
+  return combinedSynth;
+}
+
+/**
  * Main factory function - create instrument by type
  */
 export class SynthFactory {
@@ -411,6 +503,9 @@ export class SynthFactory {
 
       case 'kick':
         return createKickSynth(masterGain, options);
+
+      case 'perc':
+        return createPercSynth(masterGain, options);
 
       default:
         // Fallback to basic synth
@@ -456,6 +551,7 @@ export class SynthFactory {
       'warm_pad',
       'pad',
       'kick',
+      'perc',
       'basic'
     ];
   }
