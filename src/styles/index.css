@@ -457,6 +457,187 @@ input[type="range"]::-moz-range-thumb {
   background: var(--color-muted);
 }
 
+/* === BEAT-SYNCED LOGO FLASH === */
+.logo-beat-flash {
+  animation: beatFlash 0.15s ease-out;
+}
+
+@keyframes beatFlash {
+  0% {
+    filter: brightness(2.5);
+    text-shadow: 0 0 25px rgba(80, 180, 255, 0.9);
+  }
+  100% {
+    filter: brightness(1);
+    text-shadow: 0 0 15px rgba(80, 180, 255, 0.08);
+  }
+}
+
+/* === LED INDICATOR DOT (AnalogSwitch) === */
+.led-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  margin-top: 2px;
+  transition: all 0.15s ease;
+}
+
+.led-dot--on {
+  background: var(--color-accent);
+  box-shadow: 0 0 4px rgba(80, 180, 255, 0.6), 0 0 8px rgba(80, 180, 255, 0.2);
+}
+
+.led-dot--off {
+  background: var(--color-border-strong);
+  box-shadow: none;
+}
+
+/* === COLUMN VU MINI (simulated) === */
+.column-vu-mini {
+  display: flex;
+  align-items: flex-end;
+  gap: 1px;
+  height: 14px;
+}
+
+.column-vu-bar {
+  width: 2px;
+  border-radius: 0.5px;
+  transition: height 0.1s ease;
+}
+
+/* === CONFIDENCE RING === */
+.confidence-ring {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+.confidence-ring circle {
+  fill: none;
+  stroke-linecap: round;
+}
+
+/* === PATTERN PREVIEW === */
+.pattern-preview {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+  pointer-events: none;
+  z-index: 5;
+}
+
+.pattern-preview--visible {
+  opacity: 0.6;
+}
+
+.pattern-dot {
+  width: 2px;
+  border-radius: 1px;
+  background: rgba(255, 255, 255, 0.7);
+}
+
+.pattern-dot--rest {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+/* === MASTER VU STRIP === */
+.master-vu-strip {
+  display: flex;
+  gap: 1px;
+  height: 4px;
+  width: 100%;
+  background: var(--color-bg);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.master-vu-segment {
+  flex: 1;
+  border-radius: 0.5px;
+  transition: opacity 0.06s ease;
+}
+
+/* === PRESET HISTORY STRIP === */
+.preset-history-strip {
+  display: flex;
+  height: 6px;
+  width: 100%;
+  gap: 0;
+  background: var(--color-bg);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.preset-history-block {
+  flex-shrink: 0;
+  height: 100%;
+  transition: opacity 0.2s ease;
+}
+
+/* === DARKER THEME === */
+.theme-darker {
+  --color-bg: #000000;
+  --color-surface: #0a0a0e;
+  --color-surface-raised: #111115;
+  --color-border: #151519;
+  --color-border-strong: #1e1e24;
+  --color-muted: #555560;
+  --color-text: #cccccc;
+  --color-text-secondary: #888890;
+}
+
+.theme-darker .top-bar-panel {
+  background: linear-gradient(180deg, #0c0c10 0%, #0a0a0e 100%);
+  border-bottom-color: #151519;
+}
+
+.theme-darker .preset-button,
+.theme-darker .double-preset-cell {
+  border-width: 1px;
+}
+
+/* === MIDI LED MIRROR === */
+.midi-mirror {
+  display: grid;
+  gap: 2px;
+  padding: 4px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+}
+
+.midi-mirror-btn {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  transition: all 0.1s ease;
+}
+
+.midi-mirror-fader {
+  width: 6px;
+  height: 20px;
+  background: var(--color-border-strong);
+  border-radius: 1px;
+  position: relative;
+}
+
+.midi-mirror-fader-thumb {
+  position: absolute;
+  left: -1px;
+  right: -1px;
+  height: 4px;
+  background: var(--color-text-secondary);
+  border-radius: 1px;
+}
+
 /* === STARTUP SCREEN === */
 .startup-bg {
   background: radial-gradient(ellipse at center, #0d1117 0%, #08080c 70%);

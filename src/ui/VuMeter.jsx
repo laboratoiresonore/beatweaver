@@ -346,4 +346,186 @@ export function WaveformDisplay({ bars = 24, width = 320, height = 70, className
   );
 }
 
+/**
+ * MasterVuStrip - Full-width horizontal Pioneer LED strip
+ * 48 segments: green -> amber -> orange -> red
+ * 4px tall, placed at bottom of screen
+ */
+export function MasterVuStrip({ className = '' }) {
+  const STRIP_SEGMENTS = 48;
+  const [level, setLevel] = useState(0);
+  const analyserRef = useRef(null);
+  const animFrameRef = useRef(null);
+  const lastUpdateRef = useRef(0);
+
+  useEffect(() => {
+    analyserRef.current = new Tone.Analyser('waveform', 256);
+    Tone.getDestination().connect(analyserRef.current);
+
+    const update = (timestamp) => {
+      if (timestamp - lastUpdateRef.current < 50) {
+        animFrameRef.current = requestAnimationFrame(update);
+        return;
+      }
+      lastUpdateRef.current = timestamp;
+
+      if (!analyserRef.current) {
+        animFrameRef.current = requestAnimationFrame(update);
+        return;
+      }
+
+      const waveform = analyserRef.current.getValue();
+      let sum = 0;
+      for (let i = 0; i < waveform.length; i++) {
+        sum += waveform[i] * waveform[i];
+      }
+      const rms = Math.sqrt(sum / waveform.length);
+      setLevel(Math.min(1, rms * 4));
+      animFrameRef.current = requestAnimationFrame(update);
+    };
+
+    animFrameRef.current = requestAnimationFrame(update);
+
+    return () => {
+      if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
+      if (analyserRef.current) {
+        Tone.getDestination().disconnect(analyserRef.current);
+        analyserRef.current.dispose();
+        analyserRef.current = null;
+      }
+    };
+  }, []);
+
+  const litCount = Math.round(level * STRIP_SEGMENTS);
+
+  return (
+    <div className={`master-vu-strip ${className}`}>
+      {Array.from({ length: STRIP_SEGMENTS }, (_, i) => {
+        const pos = i / STRIP_SEGMENTS;
+        const isLit = i < litCount;
+        let color;
+        if (pos < 0.55) color = '#00C853';
+        else if (pos < 0.75) color = '#FFB300';
+        else if (pos < 0.88) color = '#FF6D00';
+        else color = '#FF1744';
+
+        return (
+          <div
+            key={i}
+            className="master-vu-segment"
+            style={{
+              backgroundColor: isLit ? color : 'rgba(42, 42, 50, 0.3)',
+              boxShadow: isLit ? `0 0 3px ${color}60` : 'none',
+            }}
+          />
+        );
+      })}
+    </div>
+  );
+}
+
+/**
+ * WaveformTimeline - Full-width scrolling 3Band waveform (30s history)
+ * Wider, slower version of WaveformDisplay for bottom of screen
+ */
+export function WaveformTimeline({ height = 32, className = '' }) {
+  const TIMELINE_BARS = 120; // ~30s at 4 updates/sec
+  const [bandLevels, setBandLevels] = useState(() =>
+    Array.from({ length: TIMELINE_BARS }, () => ({ low: 0, mid: 0, high: 0 }))
+  );
+  const analyserRef = useRef(null);
+  const animFrameRef = useRef(null);
+  const lastUpdateRef = useRef(0);
+  const historyRef = useRef([]);
+
+  useEffect(() => {
+    analyserRef.current = new Tone.Analyser('fft', 512);
+    Tone.getDestination().connect(analyserRef.current);
+
+    const update = (timestamp) => {
+      if (timestamp - lastUpdateRef.current < 250) {
+        animFrameRef.current = requestAnimationFrame(update);
+        return;
+      }
+      lastUpdateRef.current = timestamp;
+
+      if (!analyserRef.current) {
+        animFrameRef.current = requestAnimationFrame(update);
+        return;
+      }
+
+      const fftData = analyserRef.current.getValue();
+      const totalBins = fftData.length;
+      const lowEnd = Math.floor(totalBins * 0.15);
+      const midEnd = Math.floor(totalBins * 0.55);
+
+      const getBandLevel = (start, end) => {
+        let sum = 0;
+        for (let i = start; i < end; i++) {
+          sum += Math.max(0, (fftData[i] + 60) / 60);
+        }
+        return Math.min(1, (sum / (end - start)) * 1.8);
+      };
+
+      const current = {
+        low: getBandLevel(0, lowEnd),
+        mid: getBandLevel(lowEnd, midEnd),
+        high: getBandLevel(midEnd, totalBins),
+      };
+
+      historyRef.current.push(current);
+      if (historyRef.current.length > TIMELINE_BARS) {
+        historyRef.current.shift();
+      }
+
+      const padded = [
+        ...Array.from({ length: Math.max(0, TIMELINE_BARS - historyRef.current.length) }, () => ({ low: 0, mid: 0, high: 0 })),
+        ...historyRef.current,
+      ];
+
+      setBandLevels(padded);
+      animFrameRef.current = requestAnimationFrame(update);
+    };
+
+    animFrameRef.current = requestAnimationFrame(update);
+
+    return () => {
+      if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
+      if (analyserRef.current) {
+        Tone.getDestination().disconnect(analyserRef.current);
+        analyserRef.current.dispose();
+        analyserRef.current = null;
+      }
+    };
+  }, []);
+
+  return (
+    <div
+      className={`flex items-end gap-0 w-full ${className}`}
+      style={{ height }}
+    >
+      {bandLevels.map((bands, i) => {
+        const totalLevel = Math.min(1, bands.low + bands.mid + bands.high);
+        const barHeight = Math.max(0.5, totalLevel * height * 0.85);
+        const total = (bands.low + bands.mid + bands.high) || 1;
+        const lowH = (bands.low / total) * barHeight;
+        const midH = (bands.mid / total) * barHeight;
+        const highH = (bands.high / total) * barHeight;
+
+        return (
+          <div
+            key={i}
+            className="flex flex-col-reverse"
+            style={{ flex: 1, height }}
+          >
+            <div style={{ height: lowH, backgroundColor: bands.low > 0.05 ? '#0055E1' : 'transparent', opacity: 0.5 + bands.low * 0.5, borderRadius: '0.5px' }} />
+            <div style={{ height: midH, backgroundColor: bands.mid > 0.05 ? '#FFA600' : 'transparent', opacity: 0.5 + bands.mid * 0.5, borderRadius: '0.5px' }} />
+            <div style={{ height: highH, backgroundColor: bands.high > 0.05 ? '#50B4FF' : 'transparent', opacity: 0.4 + bands.high * 0.6, borderRadius: '0.5px' }} />
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 export default VuMeter;

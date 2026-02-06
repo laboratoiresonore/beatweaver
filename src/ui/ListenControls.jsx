@@ -121,6 +121,8 @@ function AnalogSwitch({ enabled, label, onToggle }) {
       `}>
         {label}
       </span>
+      {/* LED indicator dot */}
+      <div className={`led-dot ${enabled ? 'led-dot--on' : 'led-dot--off'}`} />
     </div>
   );
 }
