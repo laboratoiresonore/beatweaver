@@ -17,6 +17,10 @@ export default defineConfig({
   server: {
     port: 5173,
     strictPort: true,
+    headers: {
+      // CSP that allows blob workers for BPM analyzer
+      'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob:; style-src 'self' 'unsafe-inline'; media-src 'self' blob: data:; worker-src 'self' blob:; connect-src *",
+    },
   },
   optimizeDeps: {
     include: ['tone', 'react', 'react-dom'],

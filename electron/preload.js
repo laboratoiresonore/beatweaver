@@ -14,6 +14,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
     getInfo: () => ipcRenderer.invoke('app:info'),
   },
 
+  // TTS synthesis (generates WAV for Web Audio effects)
+  tts: {
+    synthesize: (text, options) => ipcRenderer.invoke('tts:synthesize', text, options),
+  },
+
   // Platform info
   platform: process.platform,
 });

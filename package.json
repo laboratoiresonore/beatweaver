@@ -4,19 +4,19 @@
   "description": "DJ tool for users with NO musical theory knowledge",
   "main": "electron/main.js",
   "scripts": {
-    "dev": "concurrently \"vite\" \"wait-on http://localhost:5173 && electron .\"",
+    "dev": "concurrently \"vite\" \"wait-on http://localhost:5173 && node electron/launch.js\"",
     "build": "vite build && electron-builder",
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest"
   },
   "dependencies": {
-    "tone": "^14.8.49",
-    "realtime-bpm-analyzer": "^3.0.0",
-    "essentia.js": "^0.1.3",
     "electron-store": "^8.1.0",
+    "essentia.js": "^0.1.3",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
+    "realtime-bpm-analyzer": "^3.0.0",
+    "tone": "^14.8.49",
     "zustand": "^4.5.0"
   },
   "devDependencies": {

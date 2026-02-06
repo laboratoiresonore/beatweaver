@@ -1,6 +1,7 @@
 import * as Tone from 'tone';
 import { PATTERNS, getPattern, getPresetById } from '../presets/index.js';
 import { Transposer } from './Transposer.js';
+import { SynthFactory } from './SynthFactory.js';
 
 /**
  * SynthEngine - Manages Tone.js instruments and patterns
@@ -21,8 +22,13 @@ export class SynthEngine {
     // Legacy: Active patterns for backward compat
     this.activePatterns = new Map();
 
-    // Master volume
+    // Master volume - increased by 25% (0-1.25 range)
     this.masterGain = null;
+    this.masterVolume = 1.0; // Track 0-1.25 for UI (25% louder max)
+
+    // Fade settings (seconds)
+    this.fadeInTime = 0;
+    this.fadeOutTime = 0;
 
     // Note intervals for transposition (semitones from C)
     this.NOTE_MAP = {
@@ -77,10 +83,47 @@ export class SynthEngine {
     if (this.initialized) return;
 
     await Tone.start();
-    console.log('Audio context started');
+
+    // Ensure audio context is truly running
+    if (Tone.context.state !== 'running') {
+      await Tone.context.resume();
+    }
+    console.log(`Audio context started (state: ${Tone.context.state})`);
+
+    // === PROFESSIONAL MASTER BUS CHAIN ===
+    // Signal flow: instruments -> masterGain -> compressor -> limiter -> destination
+
+    // Master limiter to prevent clipping (catches peaks above -1dB)
+    this.masterLimiter = new Tone.Limiter(-1).toDestination();
+
+    // Master compressor for glue and punch (before limiter)
+    // More aggressive settings to prevent clipping with layered instruments
+    this.masterCompressor = new Tone.Compressor({
+      threshold: -18,    // Lower threshold - catch more peaks
+      ratio: 6,          // Higher ratio - more compression
+      attack: 0.002,     // Faster attack - catch transients
+      release: 0.15,     // Faster release - recover quickly
+      knee: 10           // Softer knee - smoother compression
+    }).connect(this.masterLimiter);
 
     // Master gain for overall volume control
-    this.masterGain = new Tone.Gain(0.8).toDestination();
+    // The limiter handles peak protection, so we can push volume higher
+    // Increased by 25% from 0.8 to 1.0 for louder output
+    this.masterGain = new Tone.Gain(1.0).connect(this.masterCompressor);
+
+    // Shared effects buses (instruments can send to these)
+    this.reverbBus = new Tone.Reverb({
+      decay: 2.5,
+      wet: 1,
+      preDelay: 0.01
+    }).connect(this.masterGain);
+    this.reverbBus.generate(); // Pre-generate impulse response
+
+    this.delayBus = new Tone.FeedbackDelay({
+      delayTime: '8n',
+      feedback: 0.3,
+      wet: 1
+    }).connect(this.masterGain);
 
     // Create all 6 instruments
     this._createAcidBass();
@@ -100,61 +143,117 @@ export class SynthEngine {
   /**
    * 1. ACID BASS - TB-303 style squelchy bass
    * Character: Aggressive, squelchy, driving
+   * PRO: Added saturation for analog warmth, proper gain staging
    */
   _createAcidBass() {
+    // Channel strip for this instrument
+    const channel = new Tone.Channel({
+      volume: -12,  // Lower volume for headroom
+      pan: 0
+    }).connect(this.masterGain);
+
+    // Subtle saturation for analog warmth
+    const saturator = new Tone.Distortion({
+      distortion: 0.15,
+      wet: 0.3
+    }).connect(channel);
+
+    // Low-pass filter for extra control
+    const filter = new Tone.Filter({
+      frequency: 800,
+      type: 'lowpass',
+      rolloff: -24
+    }).connect(saturator);
+
     this.instruments.acidBass = new Tone.MonoSynth({
       oscillator: { type: 'sawtooth' },
       filter: {
-        Q: 8,
+        Q: 6,  // Reduced Q to avoid resonance spikes
         type: 'lowpass',
         rolloff: -24
       },
       envelope: {
-        attack: 0.01,
-        decay: 0.1,
-        sustain: 0.3,
-        release: 0.1
+        attack: 0.005,
+        decay: 0.15,
+        sustain: 0.25,
+        release: 0.15
       },
       filterEnvelope: {
-        attack: 0.01,
-        decay: 0.2,
-        sustain: 0.2,
+        attack: 0.005,
+        decay: 0.25,
+        sustain: 0.15,
         release: 0.2,
-        baseFrequency: 200,
-        octaves: 3.5
+        baseFrequency: 150,
+        octaves: 3
       }
-    }).connect(this.masterGain);
+    }).connect(filter);
 
-    this.instruments.acidBass.volume.value = -6;
+    this.instruments.acidBass._channel = channel;
+    this.instruments.acidBass._filter = filter;
+    this.instruments.acidBass._saturator = saturator;
   }
 
   /**
    * 2. STAB - Bright punchy chord hits
    * Character: Sharp, energetic, punchy
+   * PRO: Proper gain staging, send to reverb for space
    */
   _createStab() {
-    this.instruments.stab = new Tone.PolySynth(Tone.Synth, {
-      oscillator: { type: 'square' },
-      envelope: {
-        attack: 0.005,
-        decay: 0.15,
-        sustain: 0.1,
-        release: 0.3
-      }
+    // Channel strip
+    const channel = new Tone.Channel({
+      volume: -14,
+      pan: 0
     }).connect(this.masterGain);
 
-    // Add some brightness with a filter
-    const stabFilter = new Tone.Filter(3000, 'lowpass').connect(this.masterGain);
-    this.instruments.stab.disconnect();
-    this.instruments.stab.connect(stabFilter);
-    this.instruments.stab.volume.value = -10;
+    // Send to reverb for space
+    const reverbSend = new Tone.Gain(0.2).connect(this.reverbBus);
+
+    // Brightness filter
+    const stabFilter = new Tone.Filter({
+      frequency: 4000,
+      type: 'lowpass',
+      rolloff: -12
+    }).connect(channel);
+    stabFilter.connect(reverbSend);
+
+    this.instruments.stab = new Tone.PolySynth(Tone.Synth, {
+      oscillator: { type: 'pulse', width: 0.3 },  // Pulse wave for richer harmonics
+      envelope: {
+        attack: 0.002,
+        decay: 0.12,
+        sustain: 0.05,
+        release: 0.25
+      }
+    }).connect(stabFilter);
+
+    this.instruments.stab.maxPolyphony = 6;  // Limit polyphony to prevent CPU spikes
+    this.instruments.stab._channel = channel;
+    this.instruments.stab._filter = stabFilter;
+    this.instruments.stab._reverbSend = reverbSend;
   }
 
   /**
    * 3. ARP - Clean plucky arpeggios
    * Character: Sparkly, rhythmic, hypnotic
+   * PRO: Delay send for rhythmic interest, proper staging
    */
   _createArp() {
+    // Channel strip
+    const channel = new Tone.Channel({
+      volume: -14,
+      pan: 0.1  // Slight right for stereo width
+    }).connect(this.masterGain);
+
+    // Send to delay for rhythmic interest
+    const delaySend = new Tone.Gain(0.25).connect(this.delayBus);
+
+    // High-pass to prevent mud
+    const hiPass = new Tone.Filter({
+      frequency: 200,
+      type: 'highpass'
+    }).connect(channel);
+    hiPass.connect(delaySend);
+
     this.instruments.arp = new Tone.MonoSynth({
       oscillator: { type: 'triangle' },
       filter: {
@@ -163,98 +262,170 @@ export class SynthEngine {
         rolloff: -12
       },
       envelope: {
-        attack: 0.005,
-        decay: 0.2,
+        attack: 0.002,
+        decay: 0.15,
         sustain: 0.0,
-        release: 0.3
+        release: 0.2
       },
       filterEnvelope: {
-        attack: 0.005,
-        decay: 0.1,
-        sustain: 0.5,
-        release: 0.2,
-        baseFrequency: 800,
-        octaves: 2
+        attack: 0.002,
+        decay: 0.08,
+        sustain: 0.4,
+        release: 0.15,
+        baseFrequency: 1000,
+        octaves: 2.5
       }
-    }).connect(this.masterGain);
+    }).connect(hiPass);
 
-    this.instruments.arp.volume.value = -8;
+    this.instruments.arp._channel = channel;
+    this.instruments.arp._delaySend = delaySend;
+    this.instruments.arp._hiPass = hiPass;
   }
 
   /**
    * 4. PAD - Warm sustained atmosphere
    * Character: Lush, dreamy, enveloping
+   * PRO: Chorus + reverb for lush sound, low volume to sit in mix
    */
   _createPad() {
+    // Channel strip - pads need to be quiet
+    const channel = new Tone.Channel({
+      volume: -18,
+      pan: 0
+    }).connect(this.masterGain);
+
+    // Heavy reverb send for atmosphere
+    const reverbSend = new Tone.Gain(0.4).connect(this.reverbBus);
+
+    // Chorus for movement and width
+    const chorus = new Tone.Chorus({
+      frequency: 1.5,
+      delayTime: 3.5,
+      depth: 0.7,
+      wet: 0.5
+    }).connect(channel);
+    chorus.connect(reverbSend);
+    chorus.start();
+
+    // Low-pass to keep it soft
+    const padFilter = new Tone.Filter({
+      frequency: 3000,
+      type: 'lowpass',
+      rolloff: -12
+    }).connect(chorus);
+
     this.instruments.pad = new Tone.PolySynth(Tone.Synth, {
       oscillator: { type: 'sine' },
       envelope: {
-        attack: 0.5,
-        decay: 0.3,
-        sustain: 0.8,
-        release: 2.0
+        attack: 0.8,
+        decay: 0.4,
+        sustain: 0.7,
+        release: 2.5
       }
-    }).connect(this.masterGain);
+    }).connect(padFilter);
 
-    // Add chorus for warmth
-    const chorus = new Tone.Chorus(3, 2.5, 0.5).connect(this.masterGain);
-    chorus.start();
-    this.instruments.pad.disconnect();
-    this.instruments.pad.connect(chorus);
-    this.instruments.pad.volume.value = -12;
+    this.instruments.pad.maxPolyphony = 8;
+    this.instruments.pad._channel = channel;
+    this.instruments.pad._chorus = chorus;
+    this.instruments.pad._filter = padFilter;
+    this.instruments.pad._reverbSend = reverbSend;
   }
 
   /**
    * 5. LEAD - Cutting presence for melodies
    * Character: Bright, cutting, expressive
+   * PRO: Delay for depth, subtle saturation for presence
    */
   _createLead() {
+    // Channel strip
+    const channel = new Tone.Channel({
+      volume: -12,
+      pan: -0.1  // Slight left
+    }).connect(this.masterGain);
+
+    // Delay send for depth
+    const delaySend = new Tone.Gain(0.15).connect(this.delayBus);
+
+    // Subtle distortion for edge
+    const leadDist = new Tone.Distortion({
+      distortion: 0.08,
+      wet: 0.2
+    }).connect(channel);
+    leadDist.connect(delaySend);
+
     this.instruments.lead = new Tone.MonoSynth({
       oscillator: { type: 'sawtooth' },
       filter: {
-        Q: 3,
+        Q: 2.5,
         type: 'lowpass',
         rolloff: -12
       },
       envelope: {
-        attack: 0.02,
-        decay: 0.2,
-        sustain: 0.5,
-        release: 0.4
+        attack: 0.01,
+        decay: 0.15,
+        sustain: 0.45,
+        release: 0.3
       },
       filterEnvelope: {
-        attack: 0.02,
-        decay: 0.3,
-        sustain: 0.4,
-        release: 0.3,
-        baseFrequency: 400,
-        octaves: 3
+        attack: 0.01,
+        decay: 0.2,
+        sustain: 0.35,
+        release: 0.25,
+        baseFrequency: 500,
+        octaves: 2.5
       }
-    }).connect(this.masterGain);
+    }).connect(leadDist);
 
-    this.instruments.lead.volume.value = -8;
+    this.instruments.lead._channel = channel;
+    this.instruments.lead._dist = leadDist;
+    this.instruments.lead._delaySend = delaySend;
   }
 
   /**
    * 6. PERC - Rhythmic textural noise
    * Character: Gritty, driving, non-pitched
+   * PRO: Transient shaper effect via compression, tight gating
    */
   _createPerc() {
-    this.instruments.perc = new Tone.NoiseSynth({
-      noise: { type: 'white' },
-      envelope: {
-        attack: 0.005,
-        decay: 0.1,
-        sustain: 0.0,
-        release: 0.05
-      }
+    // Channel strip
+    const channel = new Tone.Channel({
+      volume: -16,
+      pan: 0.15  // Slight right
     }).connect(this.masterGain);
 
-    // Bandpass filter for more tonal character
-    const percFilter = new Tone.Filter(2000, 'bandpass', -12).connect(this.masterGain);
-    this.instruments.perc.disconnect();
-    this.instruments.perc.connect(percFilter);
-    this.instruments.perc.volume.value = -15;
+    // Light reverb send for room
+    const reverbSend = new Tone.Gain(0.1).connect(this.reverbBus);
+
+    // Compressor for punch
+    const percComp = new Tone.Compressor({
+      threshold: -20,
+      ratio: 6,
+      attack: 0.001,
+      release: 0.05
+    }).connect(channel);
+    percComp.connect(reverbSend);
+
+    // Bandpass for tonal character
+    const percFilter = new Tone.Filter({
+      frequency: 2500,
+      type: 'bandpass',
+      Q: 1.5
+    }).connect(percComp);
+
+    this.instruments.perc = new Tone.NoiseSynth({
+      noise: { type: 'pink' },  // Pink noise = less harsh than white
+      envelope: {
+        attack: 0.001,
+        decay: 0.08,
+        sustain: 0.0,
+        release: 0.03
+      }
+    }).connect(percFilter);
+
+    this.instruments.perc._channel = channel;
+    this.instruments.perc._filter = percFilter;
+    this.instruments.perc._comp = percComp;
+    this.instruments.perc._reverbSend = reverbSend;
   }
 
   // ============ PLAYBACK CONTROLS ============
@@ -434,106 +605,176 @@ export class SynthEngine {
   /**
    * Create a dedicated instrument instance for a preset
    * Each preset gets its own synth so multiple can play simultaneously
+   * PRO: Proper gain staging and effects matching the main instruments
+   *
+   * If preset has instrumentType, uses SynthFactory for professional sounds
+   * @param {string} instrumentName - Legacy instrument name
+   * @param {Object} preset - Preset configuration
+   * @param {Tone.Node} destination - Audio destination (defaults to masterGain, can be modulator)
    */
-  _createPresetInstrument(instrumentName) {
+  _createPresetInstrument(instrumentName, preset = null, destination = null) {
+    const dest = destination || this.masterGain;
+
+    // Check if preset specifies a SynthFactory instrument type
+    if (preset && preset.instrumentType) {
+      const factoryInstrument = SynthFactory.createInstrument(
+        preset.instrumentType,
+        dest,
+        preset.synthOptions || {}
+      );
+
+      // Connect reverb/delay sends if present
+      if (factoryInstrument._reverbSend && this.reverbBus) {
+        factoryInstrument._reverbSend.connect(this.reverbBus);
+      }
+      if (factoryInstrument._delaySend && this.delayBus) {
+        factoryInstrument._delaySend.connect(this.delayBus);
+      }
+
+      return factoryInstrument;
+    }
+
+    // Legacy instrument creation (fallback)
     let instrument;
+
+    // Per-preset channel for gain/pan control (connects to destination, which may be modulator)
+    const channel = new Tone.Channel({
+      volume: -14,  // Conservative volume for layering
+      pan: 0
+    }).connect(dest);
+
+    // Per-preset fade gain (for fade in/out)
+    const fadeGain = new Tone.Gain(1).connect(channel);
 
     switch (instrumentName) {
       case 'acidBass':
+        // Subtle saturation for warmth
+        const bassSat = new Tone.Distortion({ distortion: 0.12, wet: 0.25 }).connect(fadeGain);
         instrument = new Tone.MonoSynth({
           oscillator: { type: 'sawtooth' },
-          filter: { Q: 8, type: 'lowpass', rolloff: -24 },
-          envelope: { attack: 0.01, decay: 0.1, sustain: 0.3, release: 0.1 },
+          filter: { Q: 5, type: 'lowpass', rolloff: -24 },
+          envelope: { attack: 0.005, decay: 0.15, sustain: 0.25, release: 0.15 },
           filterEnvelope: {
-            attack: 0.01, decay: 0.2, sustain: 0.2, release: 0.2,
-            baseFrequency: 200, octaves: 3.5
+            attack: 0.005, decay: 0.25, sustain: 0.15, release: 0.2,
+            baseFrequency: 150, octaves: 3
           }
-        }).connect(this.masterGain);
-        instrument.volume.value = -6;
+        }).connect(bassSat);
+        instrument._presetSat = bassSat;
         break;
 
       case 'stab':
+        // Reverb send for space
+        const stabReverb = new Tone.Gain(0.15).connect(this.reverbBus);
+        const stabFilter = new Tone.Filter({ frequency: 4000, type: 'lowpass', rolloff: -12 }).connect(fadeGain);
+        stabFilter.connect(stabReverb);
         instrument = new Tone.PolySynth(Tone.Synth, {
-          oscillator: { type: 'square' },
-          envelope: { attack: 0.005, decay: 0.15, sustain: 0.1, release: 0.3 }
-        });
-        const stabFilter = new Tone.Filter(3000, 'lowpass').connect(this.masterGain);
-        instrument.connect(stabFilter);
-        instrument.volume.value = -10;
-        // Store filter for cleanup
+          oscillator: { type: 'pulse', width: 0.3 },
+          envelope: { attack: 0.002, decay: 0.12, sustain: 0.05, release: 0.25 }
+        }).connect(stabFilter);
+        instrument.maxPolyphony = 6;
         instrument._presetFilter = stabFilter;
+        instrument._presetReverbSend = stabReverb;
         break;
 
       case 'arp':
+        // Delay send for rhythmic interest
+        const arpDelay = new Tone.Gain(0.2).connect(this.delayBus);
+        const arpHiPass = new Tone.Filter({ frequency: 200, type: 'highpass' }).connect(fadeGain);
+        arpHiPass.connect(arpDelay);
         instrument = new Tone.MonoSynth({
           oscillator: { type: 'triangle' },
           filter: { Q: 2, type: 'lowpass', rolloff: -12 },
-          envelope: { attack: 0.005, decay: 0.2, sustain: 0.0, release: 0.3 },
+          envelope: { attack: 0.002, decay: 0.15, sustain: 0.0, release: 0.2 },
           filterEnvelope: {
-            attack: 0.005, decay: 0.1, sustain: 0.5, release: 0.2,
-            baseFrequency: 800, octaves: 2
+            attack: 0.002, decay: 0.08, sustain: 0.4, release: 0.15,
+            baseFrequency: 1000, octaves: 2.5
           }
-        }).connect(this.masterGain);
-        instrument.volume.value = -8;
+        }).connect(arpHiPass);
+        instrument._presetFilter = arpHiPass;
+        instrument._presetDelaySend = arpDelay;
         break;
 
       case 'pad':
+        // Chorus + heavy reverb
+        const padReverb = new Tone.Gain(0.35).connect(this.reverbBus);
+        const padFilter = new Tone.Filter({ frequency: 3000, type: 'lowpass', rolloff: -12 });
+        const chorus = new Tone.Chorus({ frequency: 1.5, delayTime: 3.5, depth: 0.7, wet: 0.5 }).connect(fadeGain);
+        chorus.connect(padReverb);
+        chorus.start();
+        padFilter.connect(chorus);
         instrument = new Tone.PolySynth(Tone.Synth, {
           oscillator: { type: 'sine' },
-          envelope: { attack: 0.5, decay: 0.3, sustain: 0.8, release: 2.0 }
-        });
-        const chorus = new Tone.Chorus(3, 2.5, 0.5).connect(this.masterGain);
-        chorus.start();
-        instrument.connect(chorus);
-        instrument.volume.value = -12;
+          envelope: { attack: 0.8, decay: 0.4, sustain: 0.7, release: 2.5 }
+        }).connect(padFilter);
+        instrument.maxPolyphony = 8;
+        channel.volume.value = -20;  // Pads need to be quieter
         instrument._presetChorus = chorus;
+        instrument._presetFilter = padFilter;
+        instrument._presetReverbSend = padReverb;
         break;
 
       case 'lead':
+        // Subtle distortion + delay
+        const leadDelay = new Tone.Gain(0.12).connect(this.delayBus);
+        const leadDist = new Tone.Distortion({ distortion: 0.06, wet: 0.15 }).connect(fadeGain);
+        leadDist.connect(leadDelay);
         instrument = new Tone.MonoSynth({
           oscillator: { type: 'sawtooth' },
-          filter: { Q: 3, type: 'lowpass', rolloff: -12 },
-          envelope: { attack: 0.02, decay: 0.2, sustain: 0.5, release: 0.4 },
+          filter: { Q: 2.5, type: 'lowpass', rolloff: -12 },
+          envelope: { attack: 0.01, decay: 0.15, sustain: 0.45, release: 0.3 },
           filterEnvelope: {
-            attack: 0.02, decay: 0.3, sustain: 0.4, release: 0.3,
-            baseFrequency: 400, octaves: 3
+            attack: 0.01, decay: 0.2, sustain: 0.35, release: 0.25,
+            baseFrequency: 500, octaves: 2.5
           }
-        }).connect(this.masterGain);
-        instrument.volume.value = -8;
+        }).connect(leadDist);
+        instrument._presetDist = leadDist;
+        instrument._presetDelaySend = leadDelay;
         break;
 
       case 'perc':
+        // Compressor for punch + light reverb
+        const percReverb = new Tone.Gain(0.08).connect(this.reverbBus);
+        const percComp = new Tone.Compressor({ threshold: -20, ratio: 6, attack: 0.001, release: 0.05 }).connect(fadeGain);
+        percComp.connect(percReverb);
+        const percFilter = new Tone.Filter({ frequency: 2500, type: 'bandpass', Q: 1.5 }).connect(percComp);
         instrument = new Tone.NoiseSynth({
-          noise: { type: 'white' },
-          envelope: { attack: 0.005, decay: 0.1, sustain: 0.0, release: 0.05 }
-        });
-        const percFilter = new Tone.Filter(2000, 'bandpass', -12).connect(this.masterGain);
-        instrument.connect(percFilter);
-        instrument.volume.value = -15;
+          noise: { type: 'pink' },
+          envelope: { attack: 0.001, decay: 0.08, sustain: 0.0, release: 0.03 }
+        }).connect(percFilter);
         instrument._presetFilter = percFilter;
+        instrument._presetComp = percComp;
+        instrument._presetReverbSend = percReverb;
         break;
 
       default:
         console.error(`Unknown instrument: ${instrumentName}`);
+        channel.dispose();
+        fadeGain.dispose();
         return null;
     }
 
+    // Attach nodes for cleanup and fade control
+    instrument._fadeGain = fadeGain;
+    instrument._channel = channel;
     return instrument;
   }
 
   /**
-   * Clean up a preset's dedicated instrument
+   * Clean up a preset's dedicated instrument and all its effects
    */
   _disposePresetInstrument(instrument) {
     if (!instrument) return;
 
-    // Clean up any attached effects
-    if (instrument._presetFilter) {
-      instrument._presetFilter.dispose();
-    }
-    if (instrument._presetChorus) {
-      instrument._presetChorus.dispose();
-    }
+    // Clean up all attached effects
+    if (instrument._presetFilter) instrument._presetFilter.dispose();
+    if (instrument._presetChorus) instrument._presetChorus.dispose();
+    if (instrument._presetSat) instrument._presetSat.dispose();
+    if (instrument._presetDist) instrument._presetDist.dispose();
+    if (instrument._presetComp) instrument._presetComp.dispose();
+    if (instrument._presetReverbSend) instrument._presetReverbSend.dispose();
+    if (instrument._presetDelaySend) instrument._presetDelaySend.dispose();
+    if (instrument._fadeGain) instrument._fadeGain.dispose();
+    if (instrument._channel) instrument._channel.dispose();
 
     instrument.dispose();
   }
@@ -542,12 +783,19 @@ export class SynthEngine {
    * Play a preset by ID - quantized to next beat
    * Each preset gets its own instrument instance for layering
    * @param {string} presetId - Preset ID (e.g., 'PUMP_IT_UP')
+   * @param {Tone.Node} destination - Optional destination override (e.g., modulator effect)
    * @returns {boolean} - Whether preset is now playing (or scheduled)
    */
-  playPreset(presetId) {
+  playPreset(presetId, destination = null) {
     if (!this.initialized) {
-      console.error('SynthEngine not initialized');
+      console.error('SynthEngine not initialized - call init() first');
       return false;
+    }
+
+    // Verify audio context is running
+    if (Tone.context.state !== 'running') {
+      console.warn(`Audio context is ${Tone.context.state}, attempting resume...`);
+      Tone.context.resume();
     }
 
     const preset = getPresetById(presetId);
@@ -569,16 +817,34 @@ export class SynthEngine {
     }
 
     // Create a DEDICATED instrument instance for this preset
-    const instrument = this._createPresetInstrument(preset.instrument);
+    // Pass preset for SynthFactory support, and optional destination for modulator routing
+    const instrument = this._createPresetInstrument(preset.instrument, preset, destination);
     if (!instrument) {
       console.error(`Failed to create instrument: ${preset.instrument}`);
       return false;
     }
 
+    // Track loop position to detect loop restarts and prevent voice accumulation
+    let noteCounter = 0;
+    const numNotes = patternConfig.notes.length;
+
     // Create the pattern with transposed notes
     const pattern = new Tone.Sequence(
       (time, note) => {
         try {
+          // Calculate current index within the loop
+          const currentIndex = noteCounter % numNotes;
+
+          // Detect loop restart (back to index 0 after completing a cycle)
+          // This prevents voice accumulation on PolySynths at loop boundaries
+          if (currentIndex === 0 && noteCounter > 0) {
+            // Loop just restarted - release any lingering voices on PolySynths
+            if (instrument instanceof Tone.PolySynth && typeof instrument.releaseAll === 'function') {
+              instrument.releaseAll(time);
+            }
+          }
+          noteCounter++;
+
           if (note === null) return;
 
           if (note === 'x') {
@@ -587,6 +853,8 @@ export class SynthEngine {
           } else if (Array.isArray(note)) {
             // Chord - only PolySynth can play chords, MonoSynth plays root note
             if (instrument instanceof Tone.PolySynth) {
+              // Release previous voices before triggering new chord (prevents accumulation)
+              instrument.releaseAll(time);
               const transposed = Transposer.transposeChord(note, 'C', this.rootNote);
               instrument.triggerAttackRelease(transposed, patternConfig.duration, time);
             } else {
@@ -610,13 +878,21 @@ export class SynthEngine {
     // Start transport if not running
     if (Tone.Transport.state !== 'started') {
       Tone.Transport.start();
+      console.log('Transport started');
     }
-    // Start pattern at current transport position (plays immediately, loops)
-    pattern.start(Tone.Transport.seconds);
+
+    // Apply fade-in if configured
+    if (this.fadeInTime > 0 && instrument._fadeGain) {
+      instrument._fadeGain.gain.value = 0;
+      instrument._fadeGain.gain.rampTo(1, this.fadeInTime);
+    }
+
+    // Start pattern now ("+0" = current transport position)
+    pattern.start("+0");
 
     // Store both pattern AND instrument for cleanup
     this.activePresets.set(presetId, { pattern, preset, instrument });
-    console.log(`Playing preset: ${preset.name} in ${this.rootNote}`);
+    console.log(`Playing preset: ${preset.name} (${preset.instrument}) in key ${this.rootNote} | Transport: ${Tone.Transport.state} | Context: ${Tone.context.state}`);
     return true;
   }
 
@@ -626,18 +902,29 @@ export class SynthEngine {
    */
   stopPreset(presetId) {
     const active = this.activePresets.get(presetId);
-    if (active) {
+    if (!active) return;
+
+    // Remove from active immediately (prevents double-stop)
+    this.activePresets.delete(presetId);
+    console.log(`Stopped preset: ${presetId}`);
+
+    const cleanup = () => {
       active.pattern.stop();
       active.pattern.dispose();
-      // Dispose the dedicated instrument
       this._disposePresetInstrument(active.instrument);
-      this.activePresets.delete(presetId);
-      console.log(`Stopped preset: ${presetId}`);
-    }
 
-    // Stop transport if nothing playing
-    if (this.activePresets.size === 0 && this.activePatterns.size === 0) {
-      Tone.Transport.stop();
+      // Stop transport if nothing playing
+      if (this.activePresets.size === 0 && this.activePatterns.size === 0) {
+        Tone.Transport.stop();
+      }
+    };
+
+    // Apply fade-out if configured
+    if (this.fadeOutTime > 0 && active.instrument._fadeGain) {
+      active.instrument._fadeGain.gain.rampTo(0, this.fadeOutTime);
+      setTimeout(cleanup, this.fadeOutTime * 1000 + 50);
+    } else {
+      cleanup();
     }
   }
 
@@ -712,12 +999,36 @@ export class SynthEngine {
 
   /**
    * Set master volume
-   * @param {number} value - 0-1 normalized
+   * @param {number} value - 0-1.25 normalized (25% louder max)
    */
   setMasterVolume(value) {
+    this.masterVolume = Math.max(0, Math.min(1.25, value));
     if (this.masterGain) {
-      this.masterGain.gain.value = value;
+      this.masterGain.gain.value = this.masterVolume;
     }
+  }
+
+  /**
+   * Get master volume (for UI state)
+   */
+  getMasterVolume() {
+    return this.masterVolume;
+  }
+
+  /**
+   * Set fade-in time for all instruments
+   * @param {number} seconds - 0 to 5
+   */
+  setFadeIn(seconds) {
+    this.fadeInTime = Math.max(0, Math.min(5, seconds));
+  }
+
+  /**
+   * Set fade-out time for all instruments
+   * @param {number} seconds - 0 to 5
+   */
+  setFadeOut(seconds) {
+    this.fadeOutTime = Math.max(0, Math.min(5, seconds));
   }
 
   /**
@@ -747,13 +1058,45 @@ export class SynthEngine {
    */
   dispose() {
     this.stopAll();
+
+    // Dispose instruments and their effect chains
     for (const instrument of Object.values(this.instruments)) {
+      // Clean up any attached effects
+      if (instrument._channel) instrument._channel.dispose();
+      if (instrument._filter) instrument._filter.dispose();
+      if (instrument._saturator) instrument._saturator.dispose();
+      if (instrument._dist) instrument._dist.dispose();
+      if (instrument._chorus) instrument._chorus.dispose();
+      if (instrument._comp) instrument._comp.dispose();
+      if (instrument._hiPass) instrument._hiPass.dispose();
+      if (instrument._reverbSend) instrument._reverbSend.dispose();
+      if (instrument._delaySend) instrument._delaySend.dispose();
       instrument.dispose();
     }
     this.instruments = {};
+
+    // Dispose effect buses
+    if (this.reverbBus) {
+      this.reverbBus.dispose();
+      this.reverbBus = null;
+    }
+    if (this.delayBus) {
+      this.delayBus.dispose();
+      this.delayBus = null;
+    }
+
+    // Dispose master chain
     if (this.masterGain) {
       this.masterGain.dispose();
       this.masterGain = null;
+    }
+    if (this.masterCompressor) {
+      this.masterCompressor.dispose();
+      this.masterCompressor = null;
+    }
+    if (this.masterLimiter) {
+      this.masterLimiter.dispose();
+      this.masterLimiter = null;
     }
     this.initialized = false;
   }

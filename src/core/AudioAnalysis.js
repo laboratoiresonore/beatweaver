@@ -11,6 +11,7 @@ export class AudioAnalysis {
     this.audioContext = null;
     this.analyzerNode = null;
     this.sourceNode = null;
+    this.silentGain = null; // Silent output to keep analyzer node processing
     this.stream = null;
     this.animationFrame = null;
 
@@ -42,16 +43,21 @@ export class AudioAnalysis {
     this.onBeat = null;
     this.onError = null;
 
-    // Config
-    this.MIN_BPM_CANDIDATES = 5;         // Need consistent readings before lock
-    this.BPM_STABILITY_THRESHOLD = 3;    // Lock if top candidates within 3 BPM
-    this.MIN_CHROMA_SAMPLES = 300;       // ~5 seconds at 60fps per key analysis window
-    this.KEY_STABILITY_COUNT = 3;        // Need same key detected 3 times in a row before lock
-    this.KEY_CONFIDENCE_THRESHOLD = 0.70; // 70% confidence required
-    // Total key detection time: 3 windows × 5 seconds = ~15 seconds (comparable to BPM)
+    // Config - Conservative thresholds (prevent false locks)
+    this.MIN_BPM_CANDIDATES = 6;          // Need 6 consistent readings before lock
+    this.BPM_STABILITY_THRESHOLD = 5;     // Lock only if readings within 5 BPM range
+    this.MIN_CHROMA_SAMPLES = 300;        // ~5 seconds at 60fps (or ~2.5s at 120Hz) per key window
+    this.KEY_STABILITY_COUNT = 4;         // Need 4 consecutive same key readings
+    this.KEY_CONFIDENCE_THRESHOLD = 0.55; // 55% confidence required (was 40%)
+    this.KEY_MIN_ENERGY_THRESHOLD = 0.15; // Minimum average chroma energy to analyze
+    // Total key detection time: 4 windows × 5 seconds = ~20 seconds minimum
 
     // Key stability tracking
     this.keyReadings = [];
+
+    // Analysis enable flags (can be toggled by user)
+    this.bpmAnalysisEnabled = true;
+    this.keyAnalysisEnabled = true;
   }
 
   async init() {
@@ -101,22 +107,26 @@ export class AudioAnalysis {
       this.analyzerNode.smoothingTimeConstant = 0.3;
       this.sourceNode.connect(this.analyzerNode);
 
+      // CRITICAL: Connect analyzer to a silent gain node → destination.
+      // Without this, Chromium/Electron may not process audio through the analyzer
+      // (getByteFrequencyData returns all zeros if the node graph isn't "live").
+      this.silentGain = this.audioContext.createGain();
+      this.silentGain.gain.value = 0; // Silent - no audible output
+      this.analyzerNode.connect(this.silentGain);
+      this.silentGain.connect(this.audioContext.destination);
+
       // Reset state
       this._resetState();
 
-      // Try AudioWorklet first (uses reliable realtime-bpm-analyzer library)
-      // Falls back to onset detection if AudioWorklet fails (e.g. in some Electron versions)
-      try {
-        await this._setupBpmAnalyzer();
-      } catch (err) {
-        console.warn('AudioWorklet BPM analyzer failed, using fallback:', err);
-        this._startFallbackBpmDetection();
-      }
+      // Use fallback BPM detection directly - AudioWorklet has CSP issues in Electron
+      // The onset-based detection works more reliably across environments
+      console.log('Starting fallback BPM detection (AudioWorklet disabled for reliability)');
+      this._startFallbackBpmDetection();
 
       // Start key detection loop
       this._startKeyDetectionLoop();
 
-      console.log('Audio analysis started');
+      console.log('Audio analysis started (device:', deviceId || 'default', ')');
       return true;
     } catch (err) {
       console.error('Failed to start audio analysis:', err);
@@ -129,7 +139,9 @@ export class AudioAnalysis {
     try {
       // Create the BPM AudioWorklet processor
       // v3 API: createRealTimeBpmProcessor(audioContext) returns AudioWorkletNode
+      console.log('Attempting AudioWorklet BPM setup...');
       const realtimeAnalyzerNode = await createRealTimeBpmProcessor(this.audioContext);
+      console.log('AudioWorklet BPM processor created successfully');
 
       this.bpmAnalyserNode = realtimeAnalyzerNode;
 
@@ -179,7 +191,7 @@ export class AudioAnalysis {
   }
 
   _handleBpmResult(result) {
-    if (this.bpmLocked) return;
+    if (this.bpmLocked || !this.bpmAnalysisEnabled) return;
 
     // Clear the fallback timeout since we're getting data
     if (this._workletTimeout) {
@@ -220,7 +232,7 @@ export class AudioAnalysis {
   }
 
   _handleStableBpm(result) {
-    if (this.bpmLocked) return;
+    if (this.bpmLocked || !this.bpmAnalysisEnabled) return;
 
     // v3 API: result.bpm is array of { tempo, count, confidence }
     // BPM_STABLE is sent when the analyzer is confident about the BPM
@@ -249,7 +261,7 @@ export class AudioAnalysis {
   }
 
   _checkBpmStability() {
-    if (this.bpmLocked) return;
+    if (this.bpmLocked || !this.bpmAnalysisEnabled) return;
 
     // Check if recent readings are stable
     const recent = this.bpmCandidates.slice(-10);
@@ -309,17 +321,22 @@ export class AudioAnalysis {
 
   _startFallbackBpmDetection() {
     // Fallback using simple onset detection
-    console.log('Using fallback BPM detection');
+    console.log('Using fallback BPM detection (onset-based)');
     this.fallbackMode = true;
     this.energyHistory = [];
     this.beatTimes = [];
     this.threshold = 0;
+    this._fallbackFrameCount = 0;
+    this._peakEnergy = 0;
 
     const frequencyData = new Uint8Array(this.analyzerNode.frequencyBinCount);
 
     const detectBeats = () => {
-      if (!this.analyzerNode || this.bpmLocked) {
-        if (!this.bpmLocked) {
+      if (!this.analyzerNode || this.bpmLocked || !this.bpmAnalysisEnabled) {
+        if (!this.bpmLocked && this.bpmAnalysisEnabled) {
+          this.fallbackFrame = requestAnimationFrame(detectBeats);
+        } else if (!this.bpmAnalysisEnabled) {
+          // Keep the loop alive but skip detection
           this.fallbackFrame = requestAnimationFrame(detectBeats);
         }
         return;
@@ -327,22 +344,33 @@ export class AudioAnalysis {
 
       this.analyzerNode.getByteFrequencyData(frequencyData);
       const now = performance.now();
+      this._fallbackFrameCount++;
 
-      // Calculate bass energy (0-200 Hz)
+      // Calculate bass energy (0-300 Hz) - covers kick drums (60-200 Hz)
+      // FFT size 4096 @ 44100 Hz = ~10.8 Hz per bin, so 28 bins ≈ 300 Hz
       let bassEnergy = 0;
-      for (let i = 0; i < 10; i++) {
+      for (let i = 2; i < 28; i++) {
         bassEnergy += frequencyData[i];
       }
-      bassEnergy /= 10;
+      bassEnergy /= 26;
 
-      // Total energy
-      let totalEnergy = 0;
-      for (let i = 0; i < frequencyData.length; i++) {
-        totalEnergy += frequencyData[i];
+      // Mid energy (300-2000 Hz) for snare/clap detection
+      let midEnergy = 0;
+      for (let i = 28; i < 186; i++) {
+        midEnergy += frequencyData[i];
       }
-      totalEnergy /= frequencyData.length;
+      midEnergy /= 158;
 
-      const energy = bassEnergy * 0.7 + totalEnergy * 0.3;
+      const energy = bassEnergy * 0.6 + midEnergy * 0.4;
+      this._peakEnergy = Math.max(this._peakEnergy, energy);
+
+      // Log energy levels periodically so we can diagnose "no audio" issues
+      if (this._fallbackFrameCount % 60 === 0) {
+        console.log(`BPM fallback: frame=${this._fallbackFrameCount}, energy=${energy.toFixed(1)}, peak=${this._peakEnergy.toFixed(1)}, bass=${bassEnergy.toFixed(1)}, mid=${midEnergy.toFixed(1)}, beats=${this.beatTimes.length}, candidates=${this.bpmCandidates.length}`);
+        if (this._peakEnergy < 2) {
+          console.warn('BPM fallback: Very low audio energy - check if the correct audio input device is selected');
+        }
+      }
 
       this.energyHistory.push(energy);
       if (this.energyHistory.length > 43) this.energyHistory.shift();
@@ -381,6 +409,9 @@ export class AudioAnalysis {
   }
 
   _calculateFallbackBpm() {
+    // Don't calculate if BPM analysis is disabled
+    if (!this.bpmAnalysisEnabled) return;
+
     const sorted = [...this.beatTimes].sort((a, b) => a - b);
     const q1 = sorted[Math.floor(sorted.length * 0.25)];
     const q3 = sorted[Math.floor(sorted.length * 0.75)];
@@ -395,10 +426,9 @@ export class AudioAnalysis {
     // Debug log raw values
     console.log(`Beat intervals: ${filtered.map(i => Math.round(i)).join(', ')}ms, avg: ${Math.round(avgInterval)}ms, raw BPM: ${Math.round(rawBpm)}`);
 
-    // Normalize to 85-170 range (better for dance music which is typically 100-140)
-    // This biases toward doubling slow detected tempos
-    while (rawBpm < 85) rawBpm *= 2;
-    while (rawBpm > 170) rawBpm /= 2;
+    // Normalize to 60-180 range
+    while (rawBpm < 60) rawBpm *= 2;
+    while (rawBpm > 180) rawBpm /= 2;
 
     const detectedBpm = Math.round(rawBpm);
 
@@ -417,7 +447,14 @@ export class AudioAnalysis {
       const max = Math.max(...recent);
       const range = max - min;
 
-      this.bpm = Math.round(recent.reduce((a, b) => a + b, 0) / recent.length);
+      // Use median for robustness against outliers
+      const sorted = [...recent].sort((a, b) => a - b);
+      const mid = Math.floor(sorted.length / 2);
+      const median = sorted.length % 2 === 0
+        ? Math.round((sorted[mid - 1] + sorted[mid]) / 2)
+        : sorted[mid];
+
+      this.bpm = median;
       this.bpmConfidence = Math.max(0, 1 - (range / 20));
 
       if (range <= this.BPM_STABILITY_THRESHOLD) {
@@ -438,7 +475,7 @@ export class AudioAnalysis {
     const detectKey = () => {
       if (!this.analyzerNode) return;
 
-      if (!this.keyLocked) {
+      if (!this.keyLocked && this.keyAnalysisEnabled) {
         this.analyzerNode.getByteFrequencyData(frequencyData);
         this._detectKey(frequencyData);
       }
@@ -490,18 +527,25 @@ export class AudioAnalysis {
       this.fallbackFrame = null;
     }
     if (this.bpmAnalyserNode) {
-      this.bpmAnalyserNode.disconnect();
+      try { this.bpmAnalyserNode.disconnect(); } catch { /* ignore */ }
       this.bpmAnalyserNode = null;
+    }
+    if (this.silentGain) {
+      try { this.silentGain.disconnect(); } catch { /* ignore */ }
+      this.silentGain = null;
     }
     if (this.stream) {
       this.stream.getTracks().forEach(track => track.stop());
       this.stream = null;
     }
     if (this.sourceNode) {
-      this.sourceNode.disconnect();
+      try { this.sourceNode.disconnect(); } catch { /* ignore */ }
       this.sourceNode = null;
     }
-    this.analyzerNode = null;
+    if (this.analyzerNode) {
+      try { this.analyzerNode.disconnect(); } catch { /* ignore */ }
+      this.analyzerNode = null;
+    }
   }
 
   unlockBpm() {
@@ -554,6 +598,9 @@ export class AudioAnalysis {
   static MINOR_PROFILE = [6.33, 2.68, 3.52, 5.38, 2.60, 3.53, 2.54, 4.75, 3.98, 2.69, 3.34, 3.17];
 
   _detectKey(frequencyData) {
+    // Skip if key analysis is disabled
+    if (!this.keyAnalysisEnabled) return;
+
     const chroma = this._calculateChroma(frequencyData);
 
     for (let i = 0; i < 12; i++) {
@@ -595,6 +642,8 @@ export class AudioAnalysis {
   }
 
   _analyzeKeyProgress() {
+    if (!this.keyAnalysisEnabled) return;
+
     const total = this.chromaAccumulator.reduce((a, b) => a + b, 0);
     if (total === 0) return;
 
@@ -630,8 +679,21 @@ export class AudioAnalysis {
   }
 
   _analyzeKey() {
+    // Don't analyze if key analysis is disabled
+    if (!this.keyAnalysisEnabled) return;
+
     const total = this.chromaAccumulator.reduce((a, b) => a + b, 0);
     if (total === 0) return;
+
+    // Check minimum energy threshold - don't analyze silence/noise
+    const avgEnergy = total / this.chromaSamples;
+    if (avgEnergy < this.KEY_MIN_ENERGY_THRESHOLD) {
+      console.log(`Key detection: skipping analysis, avg energy ${avgEnergy.toFixed(3)} below threshold ${this.KEY_MIN_ENERGY_THRESHOLD}`);
+      // Reset and wait for more audio
+      this.chromaAccumulator = new Array(12).fill(0);
+      this.chromaSamples = 0;
+      return;
+    }
 
     const normalizedChroma = this.chromaAccumulator.map(v => v / total);
     let bestKey = 'C';
@@ -674,6 +736,9 @@ export class AudioAnalysis {
       const recentReadings = this.keyReadings.slice(-this.KEY_STABILITY_COUNT);
       const allSameKey = recentReadings.every(r => r.key === detectedKey);
       const avgConfidence = recentReadings.reduce((sum, r) => sum + r.confidence, 0) / recentReadings.length;
+
+      // Debug: log stability progress
+      console.log(`Key detection: ${detectedKey} (conf: ${(confidence * 100).toFixed(0)}%), stable: ${allSameKey}, avg: ${(avgConfidence * 100).toFixed(0)}%, readings: ${this.keyReadings.length}`);
 
       if (allSameKey && avgConfidence >= this.KEY_CONFIDENCE_THRESHOLD) {
         this.keyLocked = true;

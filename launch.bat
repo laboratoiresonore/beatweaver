@@ -7,6 +7,18 @@ echo           BEATWEAVER LAUNCHER
 echo ========================================
 echo.
 
+:: Kill any existing processes on port 5173 (Vite dev server)
+echo Cleaning up old processes...
+for /f "tokens=5" %%a in ('netstat -ano ^| findstr :5173 ^| findstr LISTENING 2^>nul') do (
+    if not "%%a"=="0" (
+        echo Killing process %%a on port 5173...
+        taskkill //F //PID %%a >nul 2>&1
+    )
+)
+:: Also kill any orphaned electron processes for this app
+taskkill //F //IM electron.exe //T >nul 2>&1
+echo.
+
 :check_node
 :: Find npm in common locations
 set "NPM_CMD="
