@@ -49,23 +49,23 @@ export function VoiceControls({
   };
 
   return (
-    <div className="absolute right-0 top-full mt-1 z-[1000] bg-dj-surface border border-dj-border rounded-lg p-3 shadow-xl min-w-[260px]">
+    <div className="absolute right-0 top-full mt-1 z-[1000] bg-dj-surface border border-dj-border rounded-lg p-3 min-w-[260px]" style={{ boxShadow: '0 4px 24px rgba(0, 0, 0, 0.5), 0 0 1px rgba(80, 180, 255, 0.1)' }}>
       {/* Header */}
       <div className="flex items-center justify-between mb-2">
         <span className="text-[10px] text-dj-muted uppercase tracking-wider">Voice Settings</span>
         <div className="flex items-center gap-1">
           <button
             onClick={onTest}
-            className="px-2 py-0.5 rounded text-[9px] font-bold bg-dj-bg border border-dj-border text-dj-accent hover:border-dj-accent transition-colors"
+            className="px-2 py-0.5 rounded text-[9px] font-bold font-display tracking-wider bg-dj-bg border border-dj-accent/30 text-dj-accent hover:border-dj-accent transition-colors"
           >
             TEST
           </button>
           <button
             onClick={onSave}
-            className={`px-2 py-0.5 rounded text-[9px] font-bold border transition-colors ${
+            className={`px-2 py-0.5 rounded text-[9px] font-bold font-display tracking-wider border transition-colors ${
               saveStatus === 'saved'
-                ? 'bg-green-900 border-green-600 text-green-400'
-                : 'bg-dj-bg border-dj-border text-white hover:border-dj-accent'
+                ? 'bg-dj-green/10 border-dj-green/50 text-dj-green'
+                : 'bg-dj-bg border-dj-border-strong text-dj-text hover:border-dj-accent'
             }`}
           >
             {saveStatus === 'saved' ? 'SAVED' : 'SAVE'}
@@ -81,20 +81,20 @@ export function VoiceControls({
         <div className="flex gap-1">
           <button
             onClick={() => onTtsModeChange('browser')}
-            className={`flex-1 px-2 py-1 rounded text-[10px] font-bold transition-colors ${
+            className={`flex-1 px-2 py-1 rounded text-[10px] font-bold font-display tracking-wider transition-colors ${
               ttsMode === 'browser'
                 ? 'bg-dj-accent text-black'
-                : 'bg-dj-bg border border-dj-border text-dj-muted hover:text-white'
+                : 'bg-dj-bg border border-dj-border-strong text-dj-muted hover:text-dj-accent hover:border-dj-accent/40'
             }`}
           >
             BROWSER
           </button>
           <button
             onClick={() => onTtsModeChange('kobold')}
-            className={`flex-1 px-2 py-1 rounded text-[10px] font-bold transition-colors ${
+            className={`flex-1 px-2 py-1 rounded text-[10px] font-bold font-display tracking-wider transition-colors ${
               ttsMode === 'kobold'
                 ? 'bg-dj-accent text-black'
-                : 'bg-dj-bg border border-dj-border text-dj-muted hover:text-white'
+                : 'bg-dj-bg border border-dj-border-strong text-dj-muted hover:text-dj-accent hover:border-dj-accent/40'
             }`}
           >
             KOBOLD
@@ -121,10 +121,10 @@ export function VoiceControls({
             <div
               className={`w-2 h-2 rounded-full shrink-0 ${
                 koboldAvailable === true
-                  ? 'bg-green-400'
+                  ? 'bg-dj-green'
                   : koboldAvailable === null
-                    ? 'bg-yellow-400'
-                    : 'bg-red-400'
+                    ? 'bg-dj-warning'
+                    : 'bg-dj-error'
               }`}
               title={
                 koboldAvailable === true

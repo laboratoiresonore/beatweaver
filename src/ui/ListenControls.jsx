@@ -199,7 +199,7 @@ export function ListenControls({
             onMouseLeave={minusHold.stop}
             onTouchStart={minusHold.start}
             onTouchEnd={minusHold.stop}
-            className="w-6 h-6 text-xs font-bold bg-dj-surface border border-dj-border rounded hover:border-dj-muted hover:bg-dj-border transition-colors select-none active:bg-dj-accent active:text-black"
+            className="w-6 h-6 text-xs font-bold font-display bg-dj-surface border border-dj-border-strong rounded hover:border-dj-accent hover:text-dj-accent transition-colors select-none active:bg-dj-accent active:text-black"
             title="BPM - (hold to repeat)"
           >
             −
@@ -210,7 +210,7 @@ export function ListenControls({
             onMouseLeave={plusHold.stop}
             onTouchStart={plusHold.start}
             onTouchEnd={plusHold.stop}
-            className="w-6 h-6 text-xs font-bold bg-dj-surface border border-dj-border rounded hover:border-dj-muted hover:bg-dj-border transition-colors select-none active:bg-dj-accent active:text-black"
+            className="w-6 h-6 text-xs font-bold font-display bg-dj-surface border border-dj-border-strong rounded hover:border-dj-accent hover:text-dj-accent transition-colors select-none active:bg-dj-accent active:text-black"
             title="BPM + (hold to repeat)"
           >
             +
@@ -222,8 +222,9 @@ export function ListenControls({
       {analyzing && (
         <div
           className={`w-3 h-3 rounded-full transition-all duration-75 ${
-            beatFlash ? 'bg-green-400 scale-125' : 'bg-dj-border'
+            beatFlash ? 'bg-dj-accent scale-125' : 'bg-dj-border'
           }`}
+          style={beatFlash ? { boxShadow: '0 0 8px rgba(80, 180, 255, 0.5)' } : {}}
         />
       )}
 
@@ -231,17 +232,20 @@ export function ListenControls({
       <div className="relative flex items-center">
         <button
           onClick={onToggleAnalysis}
-          className={`px-3 py-1.5 rounded-l text-xs font-bold transition-all ${
+          className={`px-3 py-1.5 rounded-l text-xs font-bold font-display tracking-wider transition-all ${
             analyzing
-              ? 'bg-green-600 hover:bg-green-700'
-              : 'bg-dj-surface border border-dj-border hover:border-dj-muted'
+              ? bpmLocked && keyLocked
+                ? 'bg-dj-accent/20 border border-dj-accent text-dj-accent'
+                : 'bg-dj-warning/20 border border-dj-warning text-dj-warning'
+              : 'bg-dj-surface border border-dj-border-strong text-dj-text-secondary hover:border-dj-accent hover:text-dj-accent'
           }`}
+          style={analyzing ? { boxShadow: bpmLocked && keyLocked ? '0 0 8px rgba(80, 180, 255, 0.15)' : '0 0 8px rgba(255, 166, 0, 0.15)' } : {}}
         >
           {analyzing ? (bpmLocked && keyLocked ? 'LOCKED' : 'ANALYZING...') : 'LISTEN'}
         </button>
         <button
           onClick={handleDeviceMenuToggle}
-          className="px-2 py-1.5 rounded-r text-xs bg-dj-surface border border-l-0 border-dj-border hover:border-dj-muted"
+          className="px-2 py-1.5 rounded-r text-xs bg-dj-surface border border-l-0 border-dj-border-strong text-dj-muted hover:border-dj-accent hover:text-dj-accent transition-colors"
         >
           ▼
         </button>

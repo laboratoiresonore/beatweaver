@@ -210,7 +210,7 @@ export const PRESETS = {
       DARKNESS: { param: 'filterFreq', default: 0.5, min: 0, max: 1 },
       SQUELCH: { param: 'filterQ', default: 0.3, min: 0, max: 1 }
     },
-    color: '#22c55e', // green
+    color: '#10B176', // green
     announcement: 'Dropping the bass'
   },
 
@@ -236,7 +236,7 @@ export const PRESETS = {
       DARKNESS: { param: 'filterFreq', default: 0.6, min: 0, max: 1 },
       SQUELCH: { param: 'filterQ', default: 0.7, min: 0, max: 1 }
     },
-    color: '#22c55e',
+    color: '#10B176',
     announcement: 'Acid wobble engaged'
   },
 
@@ -261,7 +261,7 @@ export const PRESETS = {
       POWER: { param: 'volume', default: 0.8, min: 0, max: 1 },
       DARKNESS: { param: 'filterFreq', default: 0.2, min: 0, max: 1 }
     },
-    color: '#22c55e',
+    color: '#10B176',
     announcement: 'Sub bass pulse'
   },
 
@@ -286,7 +286,7 @@ export const PRESETS = {
       POWER: { param: 'volume', default: 0.6, min: 0, max: 1 },
       DARKNESS: { param: 'filterFreq', default: 0.7, min: 0, max: 1 }
     },
-    color: '#22c55e',
+    color: '#10B176',
     announcement: 'Bass stab'
   },
 
@@ -316,7 +316,7 @@ export const PRESETS = {
       POWER: { param: 'volume', default: 0.6, min: 0, max: 1 },
       ATTACK: { param: 'attack', default: 0.1, min: 0, max: 0.5 }
     },
-    color: '#eab308', // yellow
+    color: '#E0641B', // yellow
     announcement: 'Trance gate activated'
   },
 
@@ -345,7 +345,7 @@ export const PRESETS = {
       POWER: { param: 'volume', default: 0.5, min: 0, max: 1 },
       BRIGHTNESS: { param: 'filterFreq', default: 0.7, min: 0, max: 1 }
     },
-    color: '#eab308',
+    color: '#E0641B',
     announcement: 'Building energy'
   },
 
@@ -360,7 +360,7 @@ export const PRESETS = {
       POWER: { param: 'volume', default: 0.4, min: 0, max: 1 },
       INTENSITY: { param: 'decay', default: 0.5, min: 0, max: 1 }
     },
-    color: '#eab308',
+    color: '#E0641B',
     announcement: 'Building up'
   },
 
@@ -388,7 +388,7 @@ export const PRESETS = {
     controls: {
       POWER: { param: 'volume', default: 0.8, min: 0, max: 1 }
     },
-    color: '#eab308',
+    color: '#E0641B',
     announcement: 'Drop it'
   },
 
@@ -416,7 +416,7 @@ export const PRESETS = {
       POWER: { param: 'volume', default: 0.4, min: 0, max: 1 },
       WARMTH: { param: 'filterFreq', default: 0.5, min: 0, max: 1 }
     },
-    color: '#a855f7', // purple
+    color: '#B432FF', // purple
     announcement: 'Dream cloud floating'
   },
 
@@ -438,7 +438,7 @@ export const PRESETS = {
       POWER: { param: 'volume', default: 0.3, min: 0, max: 1 },
       SPARKLE: { param: 'filterFreq', default: 0.8, min: 0, max: 1 }
     },
-    color: '#a855f7',
+    color: '#B432FF',
     announcement: 'Shimmer effect'
   },
 
@@ -465,7 +465,7 @@ export const PRESETS = {
       POWER: { param: 'volume', default: 0.5, min: 0, max: 1 },
       DEPTH: { param: 'filterFreq', default: 0.3, min: 0, max: 1 }
     },
-    color: '#a855f7',
+    color: '#B432FF',
     announcement: 'Dark fog rolling in'
   },
 
@@ -488,7 +488,7 @@ export const PRESETS = {
       POWER: { param: 'volume', default: 0.7, min: 0, max: 1 },
       GRIT: { param: 'filterFreq', default: 0.5, min: 0, max: 1 }
     },
-    color: '#a855f7',
+    color: '#B432FF',
     announcement: 'Rhythm pulse'
   },
 
@@ -504,7 +504,7 @@ export const PRESETS = {
       POWER: { param: 'volume', default: 0.6, min: 0, max: 1 },
       PUNCH: { param: 'attack', default: 0.1, min: 0, max: 0.3 }
     },
-    color: '#f97316', // orange
+    color: '#FF127B', // orange
     announcement: 'Stab attack'
   },
 
@@ -519,7 +519,7 @@ export const PRESETS = {
       POWER: { param: 'volume', default: 0.5, min: 0, max: 1 },
       SWEEP: { param: 'filterFreq', default: 0.5, min: 0, max: 1 }
     },
-    color: '#f97316',
+    color: '#FF127B',
     announcement: 'Filter sweep'
   },
 
@@ -533,7 +533,7 @@ export const PRESETS = {
     controls: {
       POWER: { param: 'volume', default: 0.5, min: 0, max: 1 }
     },
-    color: '#f97316',
+    color: '#FF127B',
     announcement: 'Building tension'
   },
 
@@ -547,7 +547,7 @@ export const PRESETS = {
     controls: {
       POWER: { param: 'volume', default: 0.6, min: 0, max: 1 }
     },
-    color: '#f97316',
+    color: '#FF127B',
     announcement: 'Release'
   },
 
@@ -565,7 +565,7 @@ export const PRESETS = {
       POWER: { param: 'volume', default: 0.8, min: 0, max: 1 },
       DEPTH: { param: 'filterFreq', default: 0.1, min: 0, max: 1 }
     },
-    color: '#22c55e',
+    color: '#10B176',
     announcement: 'Deep sub engaged'
   },
 
@@ -580,7 +580,7 @@ export const PRESETS = {
       POWER: { param: 'volume', default: 0.7, min: 0, max: 1 },
       AGGRESSION: { param: 'filterQ', default: 0.8, min: 0, max: 1 }
     },
-    color: '#22c55e',
+    color: '#10B176',
     announcement: 'Growl bass'
   },
 
@@ -595,7 +595,7 @@ export const PRESETS = {
       POWER: { param: 'volume', default: 0.7, min: 0, max: 1 },
       DETUNE: { param: 'filterFreq', default: 0.5, min: 0, max: 1 }
     },
-    color: '#22c55e',
+    color: '#10B176',
     announcement: 'Reese bass rolling'
   },
 
@@ -610,7 +610,7 @@ export const PRESETS = {
       POWER: { param: 'volume', default: 0.6, min: 0, max: 1 },
       SNAP: { param: 'attack', default: 0.05, min: 0, max: 0.2 }
     },
-    color: '#22c55e',
+    color: '#10B176',
     announcement: 'Pluck bass'
   },
 
@@ -626,7 +626,7 @@ export const PRESETS = {
       POWER: { param: 'volume', default: 0.5, min: 0, max: 1 },
       SPEED: { param: 'filterFreq', default: 0.7, min: 0, max: 1 }
     },
-    color: '#eab308',
+    color: '#E0641B',
     announcement: 'Siren activated'
   },
 
@@ -641,7 +641,7 @@ export const PRESETS = {
       POWER: { param: 'volume', default: 0.5, min: 0, max: 1 },
       TENSION: { param: 'filterFreq', default: 0.6, min: 0, max: 1 }
     },
-    color: '#eab308',
+    color: '#E0641B',
     announcement: 'Rising tension'
   },
 
@@ -656,7 +656,7 @@ export const PRESETS = {
       POWER: { param: 'volume', default: 0.5, min: 0, max: 1 },
       TIGHTNESS: { param: 'decay', default: 0.3, min: 0, max: 1 }
     },
-    color: '#eab308',
+    color: '#E0641B',
     announcement: 'Snare roll'
   },
 
@@ -670,7 +670,7 @@ export const PRESETS = {
     controls: {
       POWER: { param: 'volume', default: 0.4, min: 0, max: 1 }
     },
-    color: '#eab308',
+    color: '#E0641B',
     announcement: 'White noise'
   },
 
@@ -686,7 +686,7 @@ export const PRESETS = {
       POWER: { param: 'volume', default: 0.4, min: 0, max: 1 },
       WARMTH: { param: 'filterFreq', default: 0.4, min: 0, max: 1 }
     },
-    color: '#a855f7',
+    color: '#B432FF',
     announcement: 'Choir voices'
   },
 
@@ -701,7 +701,7 @@ export const PRESETS = {
       POWER: { param: 'volume', default: 0.5, min: 0, max: 1 },
       ATTACK: { param: 'attack', default: 0.3, min: 0, max: 1 }
     },
-    color: '#a855f7',
+    color: '#B432FF',
     announcement: 'Strings rising'
   },
 
@@ -716,7 +716,7 @@ export const PRESETS = {
       POWER: { param: 'volume', default: 0.3, min: 0, max: 1 },
       SHIMMER: { param: 'filterFreq', default: 0.8, min: 0, max: 1 }
     },
-    color: '#a855f7',
+    color: '#B432FF',
     announcement: 'Bell pad'
   },
 
@@ -731,7 +731,7 @@ export const PRESETS = {
       POWER: { param: 'volume', default: 0.3, min: 0, max: 1 },
       GUST: { param: 'filterFreq', default: 0.5, min: 0, max: 1 }
     },
-    color: '#a855f7',
+    color: '#B432FF',
     announcement: 'Wind blowing'
   },
 
@@ -747,7 +747,7 @@ export const PRESETS = {
       POWER: { param: 'volume', default: 0.5, min: 0, max: 1 },
       ZAP: { param: 'filterFreq', default: 0.9, min: 0, max: 1 }
     },
-    color: '#f97316',
+    color: '#FF127B',
     announcement: 'Laser zap'
   },
 
@@ -762,7 +762,7 @@ export const PRESETS = {
       POWER: { param: 'volume', default: 0.5, min: 0, max: 1 },
       SWEEP: { param: 'filterFreq', default: 0.7, min: 0, max: 1 }
     },
-    color: '#f97316',
+    color: '#FF127B',
     announcement: 'Whoosh'
   },
 
@@ -776,7 +776,7 @@ export const PRESETS = {
     controls: {
       POWER: { param: 'volume', default: 0.5, min: 0, max: 1 }
     },
-    color: '#f97316',
+    color: '#FF127B',
     announcement: 'Reverse effect'
   },
 
@@ -791,7 +791,7 @@ export const PRESETS = {
       POWER: { param: 'volume', default: 0.4, min: 0, max: 1 },
       CHAOS: { param: 'filterFreq', default: 0.5, min: 0, max: 1 }
     },
-    color: '#f97316',
+    color: '#FF127B',
     announcement: 'Glitch mode'
   }
 };
@@ -799,10 +799,10 @@ export const PRESETS = {
 // ============ CATEGORY COLORS ============
 
 export const CATEGORY_COLORS = {
-  BASS: '#22c55e',    // green
-  ENERGY: '#eab308',  // yellow
-  TEXTURE: '#a855f7', // purple
-  FX: '#f97316'       // orange
+  BASS: '#10B176',    // rekordbox green-teal
+  ENERGY: '#E0641B',  // rekordbox orange
+  TEXTURE: '#B432FF', // rekordbox purple
+  FX: '#FF127B'       // rekordbox hot pink
 };
 
 // ============ HELPER FUNCTIONS ============

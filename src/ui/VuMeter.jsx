@@ -1,26 +1,31 @@
 import { useEffect, useRef, useState } from 'react';
 import * as Tone from 'tone';
 
+// Pioneer DJM-style LED segment zones
+// 7 green, 2 amber, 3 red (matches DJM-V10 channel meters)
+const SEGMENT_COUNT = 12;
+const SEGMENT_COLORS = [
+  'green', 'green', 'green', 'green', 'green', 'green', 'green',
+  'amber', 'amber',
+  'red', 'red', 'red',
+];
+
 /**
- * Simple live VU meter component
- * Uses Tone.js destination analyser for low-overhead level detection
- * Throttled to ~30fps to minimize CPU usage
+ * VuMeter - Pioneer DJM-style segmented LED meter
+ * Each bar is a vertical stack of discrete LED segments
+ * Green (bottom) -> Amber (mid) -> Red (top)
  */
 export function VuMeter({ bars = 8, width = 80, height = 40, className = '' }) {
   const [levels, setLevels] = useState(() => new Array(bars).fill(0));
   const analyserRef = useRef(null);
-  const dataArrayRef = useRef(null);
   const animFrameRef = useRef(null);
   const lastUpdateRef = useRef(0);
 
   useEffect(() => {
-    // Create analyser connected to Tone destination
-    // FFT size 256 = 128 frequency bins, good balance of resolution vs performance
     analyserRef.current = new Tone.Analyser('fft', 256);
     Tone.getDestination().connect(analyserRef.current);
 
     const updateMeter = (timestamp) => {
-      // Throttle to ~30fps (33ms) to minimize CPU
       if (timestamp - lastUpdateRef.current < 33) {
         animFrameRef.current = requestAnimationFrame(updateMeter);
         return;
@@ -32,11 +37,7 @@ export function VuMeter({ bars = 8, width = 80, height = 40, className = '' }) {
         return;
       }
 
-      // Get frequency data
       const fftData = analyserRef.current.getValue();
-
-      // Map frequency bins to our bar count
-      // fftData is in dB (-Infinity to 0), normalize to 0-1
       const newLevels = new Array(bars);
       const binSize = Math.floor(fftData.length / bars);
 
@@ -46,17 +47,12 @@ export function VuMeter({ bars = 8, width = 80, height = 40, className = '' }) {
         const end = Math.min(start + binSize, fftData.length);
 
         for (let j = start; j < end; j++) {
-          // Convert dB to linear (0-1), clamp negative infinity
           const db = fftData[j];
-          // dB range: -100 (silent) to 0 (max)
-          // Map to 0-1 with some headroom
           const linear = Math.max(0, (db + 60) / 60);
           sum += linear;
         }
 
-        // Average and apply some smoothing/boost for visual appeal
         const avg = sum / (end - start);
-        // Add slight decay for smoother animation
         newLevels[i] = Math.min(1, avg * 1.5);
       }
 
@@ -67,9 +63,7 @@ export function VuMeter({ bars = 8, width = 80, height = 40, className = '' }) {
     animFrameRef.current = requestAnimationFrame(updateMeter);
 
     return () => {
-      if (animFrameRef.current) {
-        cancelAnimationFrame(animFrameRef.current);
-      }
+      if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
       if (analyserRef.current) {
         Tone.getDestination().disconnect(analyserRef.current);
         analyserRef.current.dispose();
@@ -79,6 +73,7 @@ export function VuMeter({ bars = 8, width = 80, height = 40, className = '' }) {
   }, [bars]);
 
   const barWidth = (width - (bars - 1) * 2) / bars;
+  const segmentHeight = (height - (SEGMENT_COUNT - 1)) / SEGMENT_COUNT;
 
   return (
     <div
@@ -86,27 +81,29 @@ export function VuMeter({ bars = 8, width = 80, height = 40, className = '' }) {
       style={{ width, height }}
       title="Audio Level"
     >
-      {levels.map((level, i) => {
-        // Color gradient: green (low) -> yellow (mid) -> red (high)
-        const hue = 120 - (level * 120); // 120 = green, 60 = yellow, 0 = red
-        const saturation = 80 + (level * 20);
-        const lightness = 45 + (level * 10);
+      {levels.map((level, barIndex) => {
+        const litCount = Math.round(level * SEGMENT_COUNT);
 
         return (
           <div
-            key={i}
-            className="vu-bar rounded-sm transition-all duration-75"
-            style={{
-              width: barWidth,
-              height: `${Math.max(2, level * 100)}%`,
-              backgroundColor: level > 0.05
-                ? `hsl(${hue}, ${saturation}%, ${lightness}%)`
-                : 'var(--dj-border)',
-              boxShadow: level > 0.3
-                ? `0 0 ${Math.floor(level * 8)}px hsl(${hue}, ${saturation}%, ${lightness}%)`
-                : 'none',
-            }}
-          />
+            key={barIndex}
+            className="flex flex-col-reverse gap-px"
+            style={{ width: barWidth, height }}
+          >
+            {SEGMENT_COLORS.map((color, segIndex) => {
+              const isLit = segIndex < litCount;
+              return (
+                <div
+                  key={segIndex}
+                  className={`vu-segment ${isLit ? `vu-segment--${color}` : 'vu-segment--off'}`}
+                  style={{
+                    height: segmentHeight,
+                    width: '100%',
+                  }}
+                />
+              );
+            })}
+          </div>
         );
       })}
     </div>
@@ -114,8 +111,8 @@ export function VuMeter({ bars = 8, width = 80, height = 40, className = '' }) {
 }
 
 /**
- * Compact inline VU meter for header
- * Single horizontal bar with gradient
+ * VuMeterInline - Pioneer-style horizontal bar meter with peak hold
+ * Uses 4-zone stepped color: green -> amber -> orange -> red
  */
 export function VuMeterInline({ width = 60, height = 16, className = '' }) {
   const [level, setLevel] = useState(0);
@@ -130,7 +127,6 @@ export function VuMeterInline({ width = 60, height = 16, className = '' }) {
     Tone.getDestination().connect(analyserRef.current);
 
     const updateMeter = (timestamp) => {
-      // Throttle to ~30fps
       if (timestamp - lastUpdateRef.current < 33) {
         animFrameRef.current = requestAnimationFrame(updateMeter);
         return;
@@ -142,27 +138,21 @@ export function VuMeterInline({ width = 60, height = 16, className = '' }) {
         return;
       }
 
-      // Get waveform data for RMS level
       const waveform = analyserRef.current.getValue();
-
-      // Calculate RMS
       let sum = 0;
       for (let i = 0; i < waveform.length; i++) {
         sum += waveform[i] * waveform[i];
       }
       const rms = Math.sqrt(sum / waveform.length);
-
-      // Boost for visual appeal (RMS is typically small)
       const newLevel = Math.min(1, rms * 4);
 
       setLevel(newLevel);
 
-      // Peak hold with decay
       if (newLevel > peakDecayRef.current) {
         peakDecayRef.current = newLevel;
         setPeak(newLevel);
       } else {
-        peakDecayRef.current *= 0.95; // Decay
+        peakDecayRef.current *= 0.95;
         setPeak(peakDecayRef.current);
       }
 
@@ -172,9 +162,7 @@ export function VuMeterInline({ width = 60, height = 16, className = '' }) {
     animFrameRef.current = requestAnimationFrame(updateMeter);
 
     return () => {
-      if (animFrameRef.current) {
-        cancelAnimationFrame(animFrameRef.current);
-      }
+      if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
       if (analyserRef.current) {
         Tone.getDestination().disconnect(analyserRef.current);
         analyserRef.current.dispose();
@@ -183,25 +171,18 @@ export function VuMeterInline({ width = 60, height = 16, className = '' }) {
     };
   }, []);
 
-  // Color based on level
-  const getColor = (lvl) => {
-    if (lvl < 0.5) return 'var(--dj-success)';
-    if (lvl < 0.8) return 'var(--dj-warning)';
-    return 'var(--dj-error)';
-  };
-
   return (
     <div
-      className={`relative bg-dj-bg rounded overflow-hidden ${className}`}
-      style={{ width, height }}
+      className={`relative rounded overflow-hidden ${className}`}
+      style={{ width, height, background: '#0d0d14' }}
       title={`Level: ${Math.round(level * 100)}%`}
     >
-      {/* Level bar */}
+      {/* Level bar with Pioneer stepped gradient */}
       <div
         className="absolute inset-y-0 left-0 transition-all duration-75"
         style={{
           width: `${level * 100}%`,
-          background: `linear-gradient(to right, var(--dj-success), ${getColor(level)})`,
+          background: 'linear-gradient(to right, #00C853 0%, #00C853 55%, #FFB300 55%, #FFB300 75%, #FF6D00 75%, #FF6D00 88%, #FF1744 88%, #FF1744 100%)',
         }}
       />
       {/* Peak indicator */}
@@ -209,17 +190,158 @@ export function VuMeterInline({ width = 60, height = 16, className = '' }) {
         className="absolute inset-y-0 w-0.5 transition-all duration-150"
         style={{
           left: `${peak * 100}%`,
-          backgroundColor: getColor(peak),
+          backgroundColor: peak > 0.88 ? '#FF1744' : peak > 0.75 ? '#FF6D00' : peak > 0.55 ? '#FFB300' : '#00C853',
           opacity: peak > 0.05 ? 1 : 0,
         }}
       />
-      {/* Grid lines for reference */}
+      {/* Grid lines for dB reference */}
       <div className="absolute inset-0 flex">
-        <div className="flex-1 border-r border-white/10" />
-        <div className="flex-1 border-r border-white/10" />
-        <div className="flex-1 border-r border-white/10" />
+        <div className="flex-1 border-r border-white/5" />
+        <div className="flex-1 border-r border-white/5" />
+        <div className="flex-1 border-r border-white/8" />
         <div className="flex-1" />
       </div>
+    </div>
+  );
+}
+
+/**
+ * WaveformDisplay - rekordbox 3Band-style waveform visualization
+ * Low frequencies = blue, Mid = amber, High = light blue
+ * Renders behind the logo as a frequency-banded display
+ */
+export function WaveformDisplay({ bars = 24, width = 320, height = 70, className = '' }) {
+  const [bandLevels, setBandLevels] = useState(() =>
+    Array.from({ length: bars }, () => ({ low: 0, mid: 0, high: 0 }))
+  );
+  const analyserRef = useRef(null);
+  const animFrameRef = useRef(null);
+  const lastUpdateRef = useRef(0);
+  const historyRef = useRef([]);
+
+  useEffect(() => {
+    analyserRef.current = new Tone.Analyser('fft', 512);
+    Tone.getDestination().connect(analyserRef.current);
+
+    const updateWaveform = (timestamp) => {
+      if (timestamp - lastUpdateRef.current < 50) {
+        animFrameRef.current = requestAnimationFrame(updateWaveform);
+        return;
+      }
+      lastUpdateRef.current = timestamp;
+
+      if (!analyserRef.current) {
+        animFrameRef.current = requestAnimationFrame(updateWaveform);
+        return;
+      }
+
+      const fftData = analyserRef.current.getValue();
+      const totalBins = fftData.length; // 256 bins
+
+      // Split into 3 frequency bands
+      const lowEnd = Math.floor(totalBins * 0.15);   // 0-15% = bass
+      const midEnd = Math.floor(totalBins * 0.55);   // 15-55% = mids
+      // 55-100% = highs
+
+      const getBandLevel = (start, end) => {
+        let sum = 0;
+        for (let i = start; i < end; i++) {
+          sum += Math.max(0, (fftData[i] + 60) / 60);
+        }
+        return Math.min(1, (sum / (end - start)) * 1.8);
+      };
+
+      const currentBands = {
+        low: getBandLevel(0, lowEnd),
+        mid: getBandLevel(lowEnd, midEnd),
+        high: getBandLevel(midEnd, totalBins),
+      };
+
+      // Scrolling history (push new, shift old)
+      historyRef.current.push(currentBands);
+      if (historyRef.current.length > bars) {
+        historyRef.current.shift();
+      }
+
+      // Pad with zeros if not enough history yet
+      const padded = [
+        ...Array.from({ length: Math.max(0, bars - historyRef.current.length) }, () => ({ low: 0, mid: 0, high: 0 })),
+        ...historyRef.current,
+      ];
+
+      setBandLevels(padded);
+      animFrameRef.current = requestAnimationFrame(updateWaveform);
+    };
+
+    animFrameRef.current = requestAnimationFrame(updateWaveform);
+
+    return () => {
+      if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
+      if (analyserRef.current) {
+        Tone.getDestination().disconnect(analyserRef.current);
+        analyserRef.current.dispose();
+        analyserRef.current = null;
+      }
+    };
+  }, [bars]);
+
+  const barWidth = (width - (bars - 1) * 1) / bars;
+
+  return (
+    <div
+      className={`flex items-end gap-px ${className}`}
+      style={{ width, height }}
+    >
+      {bandLevels.map((bands, i) => {
+        // Stack: low (blue) on bottom, mid (amber) middle, high (light blue) top
+        const totalLevel = Math.min(1, bands.low + bands.mid + bands.high);
+        const barHeight = Math.max(1, totalLevel * height * 0.9);
+
+        // Proportional heights within the bar
+        const total = (bands.low + bands.mid + bands.high) || 1;
+        const lowH = (bands.low / total) * barHeight;
+        const midH = (bands.mid / total) * barHeight;
+        const highH = (bands.high / total) * barHeight;
+
+        return (
+          <div
+            key={i}
+            className="flex flex-col-reverse"
+            style={{ width: barWidth, height }}
+          >
+            {/* Low (bass) - bottom */}
+            <div
+              className="waveform-bar"
+              style={{
+                height: lowH,
+                backgroundColor: bands.low > 0.05 ? '#0055E1' : 'transparent',
+                opacity: 0.6 + bands.low * 0.4,
+                boxShadow: bands.low > 0.3 ? '0 0 3px rgba(0, 85, 225, 0.4)' : 'none',
+              }}
+            />
+            {/* Mid - middle */}
+            <div
+              className="waveform-bar"
+              style={{
+                height: midH,
+                backgroundColor: bands.mid > 0.05 ? '#FFA600' : 'transparent',
+                opacity: 0.6 + bands.mid * 0.4,
+                boxShadow: bands.mid > 0.3 ? '0 0 3px rgba(255, 166, 0, 0.4)' : 'none',
+              }}
+            />
+            {/* High - top */}
+            <div
+              className="waveform-bar"
+              style={{
+                height: highH,
+                backgroundColor: bands.high > 0.05 ? '#50B4FF' : 'transparent',
+                opacity: 0.5 + bands.high * 0.5,
+                boxShadow: bands.high > 0.3 ? '0 0 3px rgba(80, 180, 255, 0.3)' : 'none',
+              }}
+            />
+          </div>
+        );
+      })}
     </div>
   );
 }

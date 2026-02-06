@@ -58,14 +58,15 @@ function DiagonalButton({ preset, isActive, isReady, onToggle, position }) {
       `}
       style={{
         clipPath,
-        backgroundColor: isActive ? preset.color : (isReady ? 'rgba(60, 60, 60, 0.9)' : 'rgba(42, 42, 42, 0.8)'),
+        backgroundColor: isActive ? preset.color : (isReady ? 'rgba(35, 35, 45, 0.9)' : 'rgba(22, 22, 30, 0.85)'),
+        boxShadow: isActive ? `inset 0 0 20px rgba(0, 0, 0, 0.3)` : 'none',
       }}
     >
       <span
         className={`
-          absolute font-bold text-xs whitespace-nowrap
+          absolute font-bold text-xs whitespace-nowrap font-display tracking-wide
           ${wobbling ? 'preset-text-wobble' : ''}
-          ${isActive ? 'text-white' : (isReady ? 'text-white' : 'text-gray-300')}
+          ${isActive ? 'text-white' : (isReady ? 'text-white/90' : 'text-white/50')}
         `}
         style={textStyle}
       >
@@ -73,14 +74,22 @@ function DiagonalButton({ preset, isActive, isReady, onToggle, position }) {
       </span>
       {isActive && (
         <div
-          className="absolute w-2 h-2 bg-white rounded-full animate-pulse"
-          style={position === 'top-right' ? { top: '55%', left: '55%' } : { top: '20%', left: '15%' }}
+          className="absolute w-4 h-1 rounded-full animate-led-breathe"
+          style={{
+            backgroundColor: 'rgba(255, 255, 255, 0.85)',
+            boxShadow: '0 0 6px rgba(255, 255, 255, 0.4)',
+            ...(position === 'top-right' ? { top: '55%', left: '50%' } : { top: '22%', left: '12%' }),
+          }}
         />
       )}
       {isReady && !isActive && (
         <div
-          className="absolute w-1.5 h-1.5 bg-yellow-400 rounded-full animate-ping"
-          style={position === 'top-right' ? { top: '55%', left: '55%' } : { top: '20%', left: '15%' }}
+          className="absolute w-1.5 h-1.5 rounded-full animate-led-breathe"
+          style={{
+            backgroundColor: '#FFA600',
+            boxShadow: '0 0 6px rgba(255, 166, 0, 0.5)',
+            ...(position === 'top-right' ? { top: '55%', left: '55%' } : { top: '20%', left: '15%' }),
+          }}
         />
       )}
     </button>
@@ -159,15 +168,20 @@ export function PresetGrid({ activePresets, readyPresets, onTogglePreset }) {
         <div
           key={category}
           className="flex flex-col min-h-0 bg-dj-surface rounded-lg border border-dj-border overflow-hidden"
+          style={{ boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.02)' }}
         >
           {/* Category header */}
           <div
-            className="preset-category-header flex items-center gap-2 px-3 py-1.5 border-b border-dj-border"
-            style={{ borderLeftColor: CATEGORY_COLORS[category], borderLeftWidth: 3 }}
+            className="preset-category-header texture-aluminum flex items-center gap-2 px-3 py-1.5 border-b border-dj-border"
+            style={{
+              borderLeftColor: CATEGORY_COLORS[category],
+              borderLeftWidth: 4,
+              boxShadow: getActiveCount(category) > 0 ? `inset 0 0 12px ${CATEGORY_COLORS[category]}15` : 'none',
+            }}
           >
-            <span className="font-bold text-sm">{category}</span>
+            <span className="font-bold text-sm font-display tracking-wider" style={{ color: CATEGORY_COLORS[category] }}>{category}</span>
             {getActiveCount(category) > 0 && (
-              <span className="text-xs text-dj-accent">
+              <span className="text-xs font-display" style={{ color: CATEGORY_COLORS[category] }}>
                 {getActiveCount(category)}
               </span>
             )}
