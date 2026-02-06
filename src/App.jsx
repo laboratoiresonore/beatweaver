@@ -647,9 +647,13 @@ function BeatweaverApp() {
   if (!initialized) {
     return (
       <div className="h-screen flex flex-col items-center justify-center bg-dj-bg">
-        <div className="logo-container mb-4 px-4 py-2 flex flex-col items-center">
-          <VuMeter bars={12} width={120} height={50} className="mb-2 opacity-30" />
-          <h1 className="text-5xl font-bold logo-text">BEATWEAVER</h1>
+        <div className="logo-container mb-4 px-8 py-4 relative overflow-hidden rounded-xl">
+          {/* VU meter as full background */}
+          <div className="absolute inset-0 flex items-end justify-center">
+            <VuMeter bars={24} width={320} height={70} className="opacity-20" />
+          </div>
+          {/* Text overlay */}
+          <h1 className="relative z-10 text-5xl font-bold logo-text">BEATWEAVER</h1>
         </div>
         <p className="text-dj-muted mb-2">Auto-detect BPM and Key from audio</p>
         <p className="text-dj-muted text-xs mb-6">
@@ -671,18 +675,22 @@ function BeatweaverApp() {
     <div className="h-screen flex flex-col bg-dj-bg p-4 overflow-hidden">
       {/* Top Bar - Controls */}
       <div className="flex items-center gap-4 mb-4 px-2">
-        {/* Logo + VU Meter */}
+        {/* Logo + VU Meter Background */}
         <div
-          className="logo-container px-3 py-1 cursor-pointer flex items-center gap-2"
+          className="logo-container relative px-4 py-2 cursor-pointer overflow-hidden rounded-lg"
           onClick={() => { try { bw.current?.announcer.announce('Beatweaver', true); } catch { /* ignore */ } }}
         >
-          <VuMeter
-            bars={8}
-            width={60}
-            height={32}
-            className={activePresets.size > 0 ? 'opacity-100' : 'opacity-40'}
-          />
-          <h1 className={`text-xl font-bold logo-text ${activePresets.size > 0 ? 'logo-text--cycling' : ''}`}>
+          {/* VU meter as full background */}
+          <div className="absolute inset-0 flex items-end justify-center">
+            <VuMeter
+              bars={16}
+              width={180}
+              height={40}
+              className={activePresets.size > 0 ? 'opacity-60' : 'opacity-20'}
+            />
+          </div>
+          {/* Text overlay */}
+          <h1 className={`relative z-10 text-xl font-bold logo-text ${activePresets.size > 0 ? 'logo-text--cycling' : ''}`}>
             BEATWEAVER
           </h1>
         </div>
