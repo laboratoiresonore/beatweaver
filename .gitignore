@@ -4,3 +4,10 @@ release/
 .env
 .env.local
 *.log
+
+# MCP config (contains API keys)
+.mcp.json
+gemini-output/
+
+# Claude Code internal files
+.claude/
