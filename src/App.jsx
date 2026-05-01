@@ -87,7 +87,7 @@ function BeatweaverApp() {
 
   // TTS mode and Kobold
   const [ttsMode, setTtsMode] = useState('browser'); // 'browser' or 'kobold'
-  const [koboldUrl, setKoboldUrl] = useState('http://192.168.0.100:5001');
+  const [koboldUrl, setKoboldUrl] = useState('');
   const [koboldAvailable, setKoboldAvailable] = useState(false);
   const [saveStatus, setSaveStatus] = useState('idle');
 
