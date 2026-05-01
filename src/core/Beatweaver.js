@@ -1257,7 +1257,7 @@ export class Beatweaver {
 
   /**
    * Set Kobold TTS server URL
-   * @param {string} url - Full URL (e.g. 'http://192.168.0.100:5001')
+   * @param {string} url - Full URL (e.g. 'http://<host>:<port>')
    * @returns {Promise<boolean>} Whether Kobold is available at the new URL
    */
   async setKoboldUrl(url) {

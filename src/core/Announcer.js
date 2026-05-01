@@ -11,7 +11,11 @@
  */
 
 export class Announcer {
-  constructor(koboldUrl = 'http://192.168.0.100:5001') {
+  constructor(koboldUrl = '') {
+    // Empty default = no Kobold endpoint configured; user supplies via
+    // settings (App.jsx loads from electron settings / localStorage and
+    // calls setKoboldUrl). Hardcoded LAN IPs are PII per the lattice
+    // pre-commit hook — never bake one in.
     this.koboldUrl = koboldUrl;
     this.koboldSpeaker = 'af_heart'; // Kokoro default speaker (af_heart = female)
     this.enabled = true;
@@ -70,6 +74,10 @@ export class Announcer {
    * Check if Kobold TTS endpoint is reachable
    */
   async _testKobold() {
+    if (!this.koboldUrl) {
+      this.koboldAvailable = false;
+      return;
+    }
     try {
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 3000);
@@ -689,7 +697,7 @@ export class Announcer {
 
   /**
    * Set Kobold TTS server URL and re-test connection
-   * @param {string} url - Full URL (e.g. 'http://192.168.0.100:5001')
+   * @param {string} url - Full URL (e.g. 'http://<host>:<port>')
    * @returns {Promise<boolean>} Whether Kobold is now available
    */
   async setKoboldUrl(url) {
