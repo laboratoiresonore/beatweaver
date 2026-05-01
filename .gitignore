@@ -5,6 +5,12 @@ release/
 .env.local
 *.log
 
+# Binary archives never tracked (design handoffs etc. arrive as zips
+# but get extracted to _dev_docs/<name>/ for review). Source-of-truth is
+# the extracted tree, not the archive. Whimweaver.zip 2026-04-30 was the
+# triggering case — tracked once, then moved to _dev_docs/design_handoff_beatweaver/.
+*.zip
+
 # MCP config (contains API keys)
 .mcp.json
 gemini-output/
