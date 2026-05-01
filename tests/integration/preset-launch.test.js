@@ -152,9 +152,9 @@ describe('Preset Launch', () => {
   });
 
   describe('preset library', () => {
-    it('has 16 presets', () => {
+    it('has 32 presets', () => {
       const presets = getAllPresets();
-      expect(presets.length).toBe(16);
+      expect(presets.length).toBe(32);
     });
 
     it('all presets have required fields', () => {
@@ -167,6 +167,29 @@ describe('Preset Launch', () => {
         expect(preset.pattern).toBeDefined();
         expect(preset.controls).toBeDefined();
       });
+    });
+
+    it('all presets have grid + voice-line fields from the 2026-04-30 design handoff', () => {
+      const presets = getAllPresets();
+      const grid = new Map();
+      presets.forEach(preset => {
+        expect(typeof preset.col).toBe('number');
+        expect(preset.col).toBeGreaterThanOrEqual(0);
+        expect(preset.col).toBeLessThanOrEqual(3);
+        expect(typeof preset.row).toBe('number');
+        expect(preset.row).toBeGreaterThanOrEqual(0);
+        expect(preset.row).toBeLessThanOrEqual(3);
+        expect(['A', 'B']).toContain(preset.bank);
+        expect(typeof preset.cue).toBe('string');
+        expect(preset.cue.length).toBeGreaterThan(0);
+        expect(typeof preset.fire).toBe('string');
+        expect(preset.fire.length).toBeGreaterThan(0);
+        const slot = `${preset.col},${preset.row},${preset.bank}`;
+        expect(grid.has(slot), `duplicate slot ${slot} (${grid.get(slot)} vs ${preset.id})`).toBe(false);
+        grid.set(slot, preset.id);
+      });
+      // 4 columns × 4 rows × 2 banks = 32 unique slots, fully covered.
+      expect(grid.size).toBe(32);
     });
 
     it('presets have unique IDs', () => {

@@ -932,11 +932,17 @@ export class Beatweaver {
       this.midiController.setLaunchingLED(bankIndex);
     }
 
-    // Announce preset name (or custom announcement if defined)
-    if (preset.announcement) {
-      this._announce(preset.announcement);
-    } else if (preset.name) {
-      this._announce(preset.name);
+    // Announce preset name. Field precedence:
+    //   preset.fire        — long-form DJ-talk fire line ("Trance Gate — open.") from the
+    //                        2026-04-30 design handoff. Speaks on click/MIDI fire today;
+    //                        the future arm-then-fire UI also uses this on FIRE.
+    //   preset.announcement — legacy short label ("Trance gate activated"). Kept as fallback
+    //                        for any preset (or future custom preset) that hasn't been
+    //                        upgraded to the new fire/cue copy.
+    //   preset.name         — last-resort fallback.
+    const announceText = preset.fire || preset.announcement || preset.name;
+    if (announceText) {
+      this._announce(announceText);
     }
 
     // Get column for this preset (BASS=0, ENERGY=1, TEXTURE=2, FX=3)
