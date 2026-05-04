@@ -53,7 +53,7 @@ function PatternPreview({ patternName, visible }) {
 
 // Diagonal half-button (used in DoublePresetButton)
 // NOTE: SparkEffect is rendered in parent DoublePresetButton to avoid clip-path clipping
-function DiagonalButton({ preset, isActive, isReady, onToggle, position }) {
+function DiagonalButton({ preset, isActive, isReady, isArmed, onToggle, onArm, onFireArmed, position }) {
   const [wobbling, setWobbling] = useState(false);
   const [hovered, setHovered] = useState(false);
   const wasActiveRef = useRef(isActive);
@@ -79,6 +79,19 @@ function DiagonalButton({ preset, isActive, isReady, onToggle, position }) {
     onToggle();
   };
 
+  const handleContextMenu = (e) => {
+    // Right-click: arm/disarm. preventDefault stops the OS context menu.
+    e.preventDefault();
+    e.stopPropagation();
+    onArm?.();
+  };
+
+  const handleFireArmedClick = (e) => {
+    // Click the FIRE pip (visible only when armed): fire just this armed preset.
+    e.stopPropagation();
+    onFireArmed?.();
+  };
+
   // Diagonal clip paths: top-left triangle vs bottom-right triangle (backslash direction \)
   const clipPath = position === 'top-right'
     ? 'polygon(100% 0, 100% 100%, 0 100%)'  // Bottom-right triangle
@@ -95,16 +108,27 @@ function DiagonalButton({ preset, isActive, isReady, onToggle, position }) {
   return (
     <button
       onClick={handleClick}
+      onContextMenu={handleContextMenu}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
+      title={`${preset.name} — click to fire, right-click to arm`}
+      aria-pressed={isActive}
+      aria-label={`${preset.name} (${preset.bank}) — ${isActive ? 'active' : isArmed ? 'armed' : 'idle'}`}
       className={`
         absolute inset-0 transition-all duration-75
         ${isActive ? 'z-20' : 'z-10 hover:z-15'}
         ${isReady && !isActive ? `preset-ready ${bankClass}` : ''}
+        ${isArmed && !isActive ? `preset-armed ${bankClass}` : ''}
       `}
       style={{
         clipPath,
-        backgroundColor: isActive ? preset.color : (isReady ? 'rgba(35, 35, 45, 0.9)' : 'rgba(22, 22, 30, 0.85)'),
+        backgroundColor: isActive
+          ? preset.color
+          : isArmed
+            ? `${preset.color}33` /* 20% tint when armed */
+            : isReady
+              ? 'rgba(35, 35, 45, 0.9)'
+              : 'rgba(22, 22, 30, 0.85)',
         boxShadow: isActive ? `inset 0 0 20px rgba(0, 0, 0, 0.3)` : 'none',
       }}
     >
@@ -142,18 +166,49 @@ function DiagonalButton({ preset, isActive, isReady, onToggle, position }) {
           }}
         />
       )}
+      {isArmed && !isActive && (
+        // Small FIRE pip on the armed half. Click fires just this preset (and disarms it).
+        // Sized small to fit cleanly inside the diagonal triangle without crowding the name.
+        <span
+          role="button"
+          tabIndex={-1}
+          onClick={handleFireArmedClick}
+          className="preset-fire-pip"
+          style={{
+            position: 'absolute',
+            ...(position === 'top-right'
+              ? { bottom: '8%', right: '8%' }
+              : { top: '8%', left: '8%' }),
+            color: preset.color,
+            border: `1px solid ${preset.color}`,
+            backgroundColor: 'rgba(0, 0, 0, 0.55)',
+            padding: '1px 5px',
+            borderRadius: 3,
+            fontSize: 9,
+            fontWeight: 700,
+            letterSpacing: '0.06em',
+            textShadow: `0 0 4px ${preset.color}`,
+            boxShadow: `0 0 6px ${preset.color}55`,
+            zIndex: 25,
+          }}
+        >
+          FIRE
+        </span>
+      )}
     </button>
   );
 }
 
 // Double preset cell - two diagonal buttons overlapping
 // SparkEffect is rendered here (outside clip-path) so sparks aren't clipped
-function DoublePresetButton({ presetA, presetB, activePresets, readyPresets, onTogglePreset }) {
+function DoublePresetButton({ presetA, presetB, activePresets, readyPresets, armedPresets, onTogglePreset, onArmPreset, onFireArmed }) {
   const cellRef = useRef(null);
   const isActiveA = activePresets.has(presetA.id);
   const isActiveB = activePresets.has(presetB.id);
   const isReadyA = readyPresets?.has(presetA.id) || false;
   const isReadyB = readyPresets?.has(presetB.id) || false;
+  const isArmedA = armedPresets?.has(presetA.id) || false;
+  const isArmedB = armedPresets?.has(presetB.id) || false;
 
   return (
     <div className="double-preset-cell" ref={cellRef}>
@@ -164,7 +219,10 @@ function DoublePresetButton({ presetA, presetB, activePresets, readyPresets, onT
         preset={presetA}
         isActive={isActiveA}
         isReady={isReadyA}
+        isArmed={isArmedA}
         onToggle={() => onTogglePreset(presetA.id)}
+        onArm={() => onArmPreset?.(presetA.id)}
+        onFireArmed={() => onFireArmed?.(presetA.id)}
         position="bottom-left"
       />
       {/* Top-right: Bank B */}
@@ -172,7 +230,10 @@ function DoublePresetButton({ presetA, presetB, activePresets, readyPresets, onT
         preset={presetB}
         isActive={isActiveB}
         isReady={isReadyB}
+        isArmed={isArmedB}
         onToggle={() => onTogglePreset(presetB.id)}
+        onArm={() => onArmPreset?.(presetB.id)}
+        onFireArmed={() => onFireArmed?.(presetB.id)}
         position="top-right"
       />
       {/* Spark effects - outside clip-path so they're not clipped */}
@@ -182,7 +243,7 @@ function DoublePresetButton({ presetA, presetB, activePresets, readyPresets, onT
   );
 }
 
-export function PresetGrid({ activePresets, readyPresets, onTogglePreset }) {
+export function PresetGrid({ activePresets, readyPresets, armedPresets, onTogglePreset, onArmPreset, onFireArmed }) {
   // Get presets paired by category: [A0,B0], [A1,B1], [A2,B2], [A3,B3]
   const pairedPresetsByCategory = useMemo(() => {
     const categories = ['BASS', 'ENERGY', 'TEXTURE', 'FX'];
@@ -257,7 +318,10 @@ export function PresetGrid({ activePresets, readyPresets, onTogglePreset }) {
                   presetB={pair.b}
                   activePresets={activePresets}
                   readyPresets={readyPresets}
+                  armedPresets={armedPresets}
                   onTogglePreset={onTogglePreset}
+                  onArmPreset={onArmPreset}
+                  onFireArmed={onFireArmed}
                 />
               ) : null
             ))}

@@ -425,16 +425,14 @@ export class Announcer {
   }
 
   /**
-   * Play audio blob (from Kobold)
+   * Play audio blob (from Kobold).
+   * The Web Audio effects path (_playAudioWithEffects) is intentionally gated off:
+   * decodeAudioData failures on some Windows audio sessions could put the AudioContext
+   * into a non-recoverable state and freeze the renderer. Until that's stabilised, we
+   * play through a plain <audio> element. The effects code path is kept (and tested)
+   * for the day we re-enable it.
    */
   async _playAudio(blob) {
-    // TEMPORARY: Skip effects entirely to debug crash
-    // Use Web Audio API for effects if available and context is usable
-    // if (this._audioContext && this._reverbNode && this._audioContext.state !== 'closed') {
-    //   return this._playAudioWithEffects(blob);
-    // }
-
-    // Fallback: plain Audio element (no effects)
     return this._playAudioFallback(blob);
   }
 

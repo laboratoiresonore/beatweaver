@@ -267,15 +267,18 @@ describe('MidiController', () => {
       expect(calls.find(c => c[0][1] === 44)[0][2]).toBe(MidiController.LCXL.LED_GREEN);
     });
 
-    it('allLEDsOff turns off all 16 buttons', () => {
+    it('allLEDsOff turns off all 16 buttons + 1 batched knob SysEx', () => {
       // Clear connection flash calls from _findDevice
       mockAccess._output.send.mockClear();
 
       controller.allLEDsOff();
 
-      // 8 top + 8 bottom = 16 calls
-      expect(mockAccess._output.send).toHaveBeenCalledTimes(16);
-      mockAccess._output.send.mock.calls.forEach(call => {
+      // 8 top + 8 bottom button Note Offs + 1 SysEx batch for 24 knob LEDs = 17 sends
+      expect(mockAccess._output.send).toHaveBeenCalledTimes(17);
+      // The 16 button calls should all be 3-byte Note On with velocity 0
+      const buttonCalls = mockAccess._output.send.mock.calls.filter(c => c[0].length === 3);
+      expect(buttonCalls).toHaveLength(16);
+      buttonCalls.forEach(call => {
         expect(call[0][2]).toBe(0); // All velocities = 0 (off)
       });
     });

@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  BEATWEAVER wordmark with meter underline — matches the design handoff's
+  top transport-bar header (Wordmark.jsx target).
+  - Letter-by-letter shimmer: implemented via per-letter <text> + animateColor
+  - Meter underline: 32 ticks, two of which "flicker" to indicate live signal
+
+  At runtime the React `Wordmark.jsx` recreates this with breathing animation
+  driven by `useLiveSignal`. This SVG is the static brand reference.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 140" width="720" height="140" role="img" aria-label="BEATWEAVER">
+  <defs>
+    <linearGradient id="text-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%"  stop-color="#E6E8EE"/>
+      <stop offset="50%" stop-color="#FFFFFF"/>
+      <stop offset="100%" stop-color="#9097A6"/>
+    </linearGradient>
+  </defs>
+
+  <text x="360" y="86"
+        text-anchor="middle"
+        font-family="JetBrains Mono, ui-monospace, monospace"
+        font-weight="700"
+        font-size="78"
+        letter-spacing="14"
+        fill="url(#text-gradient)">BEATWEAVER</text>
+
+  <!-- Meter underline: 32 evenly-spaced ticks, sparser at the edges -->
+  <g stroke="#535A6B" stroke-width="2" stroke-linecap="round">
+    <g id="ticks">
+      <line x1="80"  y1="118" x2="80"  y2="124"/>
+      <line x1="100" y1="118" x2="100" y2="124"/>
+      <line x1="120" y1="118" x2="120" y2="124"/>
+      <line x1="140" y1="118" x2="140" y2="124"/>
+      <line x1="160" y1="118" x2="160" y2="124"/>
+      <line x1="180" y1="118" x2="180" y2="124"/>
+      <line x1="200" y1="118" x2="200" y2="124"/>
+      <line x1="220" y1="118" x2="220" y2="124"/>
+      <line x1="240" y1="118" x2="240" y2="124"/>
+      <line x1="260" y1="118" x2="260" y2="124"/>
+      <line x1="280" y1="118" x2="280" y2="124"/>
+      <line x1="300" y1="118" x2="300" y2="124"/>
+      <line x1="320" y1="118" x2="320" y2="124"/>
+      <line x1="340" y1="118" x2="340" y2="124"/>
+      <line x1="360" y1="118" x2="360" y2="124"/>
+      <line x1="380" y1="118" x2="380" y2="124"/>
+      <line x1="400" y1="118" x2="400" y2="124"/>
+      <line x1="420" y1="118" x2="420" y2="124"/>
+      <line x1="440" y1="118" x2="440" y2="124"/>
+      <line x1="460" y1="118" x2="460" y2="124"/>
+      <line x1="480" y1="118" x2="480" y2="124"/>
+      <line x1="500" y1="118" x2="500" y2="124"/>
+      <line x1="520" y1="118" x2="520" y2="124"/>
+      <line x1="540" y1="118" x2="540" y2="124"/>
+      <line x1="560" y1="118" x2="560" y2="124"/>
+      <line x1="580" y1="118" x2="580" y2="124"/>
+      <line x1="600" y1="118" x2="600" y2="124"/>
+      <line x1="620" y1="118" x2="620" y2="124"/>
+      <line x1="640" y1="118" x2="640" y2="124"/>
+    </g>
+  </g>
+  <!-- Two highlighted ticks to suggest the live meter -->
+  <line x1="320" y1="116" x2="320" y2="126" stroke="#50B4FF" stroke-width="3" stroke-linecap="round"/>
+  <line x1="400" y1="116" x2="400" y2="126" stroke="#50B4FF" stroke-width="3" stroke-linecap="round"/>
+</svg>

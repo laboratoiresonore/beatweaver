@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- TEXTURE column glyph: layered cloud / pad shape. Color: --cat-texture #B432FF -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32" role="img" aria-label="Texture">
+  <g fill="none" stroke="#B432FF" stroke-width="2" stroke-linecap="round">
+    <path d="M4 22 Q 6 16, 10 18 Q 12 12, 18 14 Q 22 10, 26 16 Q 30 18, 28 22 Z" fill="#B432FF" fill-opacity="0.18"/>
+    <path d="M6 26 Q 10 24, 14 26 T 22 26 T 28 26"/>
+  </g>
+</svg>
