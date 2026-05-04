@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024" role="img" aria-label="Beatweaver">
+  <defs>
+    <linearGradient id="bw-bg" x1="0" y1="0" x2="1024" y2="1024" gradientUnits="userSpaceOnUse">
+      <stop offset="0%"  stop-color="#1A0A2E" />
+      <stop offset="50%" stop-color="#16213E" />
+      <stop offset="100%" stop-color="#0F0F23" />
+    </linearGradient>
+    <linearGradient id="bw-bar" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"  stop-color="#00F5FF" />
+      <stop offset="50%" stop-color="#7B2CBF" />
+      <stop offset="100%" stop-color="#FF006E" />
+    </linearGradient>
+    <filter id="bw-glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="6" result="blur" />
+      <feMerge>
+        <feMergeNode in="blur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+  </defs>
+  <rect width="1024" height="1024" rx="204.8" fill="url(#bw-bg)" />
+  <g filter="url(#bw-glow)">
+  <rect x="92.16" y="473.60" width="51.20" height="76.80" rx="17.07" fill="url(#bw-bar)" />
+  <rect x="163.84" y="448.00" width="51.20" height="128.00" rx="17.07" fill="url(#bw-bar)" />
+  <rect x="235.52" y="409.60" width="51.20" height="204.80" rx="17.07" fill="url(#bw-bar)" />
+  <rect x="307.20" y="358.40" width="51.20" height="307.20" rx="17.07" fill="url(#bw-bar)" />
+  <rect x="378.88" y="294.40" width="51.20" height="435.20" rx="17.07" fill="url(#bw-bar)" />
+  <rect x="450.56" y="268.80" width="51.20" height="486.40" rx="17.07" fill="url(#bw-bar)" />
+  <rect x="522.24" y="268.80" width="51.20" height="486.40" rx="17.07" fill="url(#bw-bar)" />
+  <rect x="593.92" y="294.40" width="51.20" height="435.20" rx="17.07" fill="url(#bw-bar)" />
+  <rect x="665.60" y="358.40" width="51.20" height="307.20" rx="17.07" fill="url(#bw-bar)" />
+  <rect x="737.28" y="409.60" width="51.20" height="204.80" rx="17.07" fill="url(#bw-bar)" />
+  <rect x="808.96" y="448.00" width="51.20" height="128.00" rx="17.07" fill="url(#bw-bar)" />
+  <rect x="880.64" y="473.60" width="51.20" height="76.80" rx="17.07" fill="url(#bw-bar)" />
+  </g>
+  <text x="512" y="890.88" text-anchor="middle"
+        font-family="'JetBrains Mono', 'Roboto Mono', 'SF Mono', monospace"
+        font-weight="700" font-size="122.88" letter-spacing="0.06em" fill="#FFFFFF">BW</text>
+</svg>

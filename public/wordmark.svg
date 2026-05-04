@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Beatweaver wordmark — for splash, README header, social cards.
+
+  Letter-by-letter shimmer matching the design-handoff `Wordmark` component:
+  each glyph drifts on its own ~3s phase under a slow ~10s breathing fill.
+  Kept in pure SVG (no JS) so it renders in static contexts (GitHub, slide decks).
+
+  When porting to the live app per design-handoff issue #3, replace this with
+  the React component that animates against the live-signal `tick` value so
+  shimmer locks to the BPM beat — this asset is the visual reference target.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 96" width="480" height="96"
+     role="img" aria-label="BEATWEAVER">
+  <defs>
+    <linearGradient id="wm-fill" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%"  stop-color="#00F5FF"/>
+      <stop offset="50%" stop-color="#7B2CBF"/>
+      <stop offset="100%" stop-color="#FF006E"/>
+    </linearGradient>
+    <linearGradient id="wm-meter" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%"  stop-color="oklch(0.78 0.16 155)"/>  <!-- ok green -->
+      <stop offset="60%" stop-color="oklch(0.78 0.15 75)"/>   <!-- warn amber -->
+      <stop offset="100%" stop-color="oklch(0.66 0.20 24)"/>  <!-- danger red -->
+    </linearGradient>
+    <style>
+      @keyframes wmBreathe { 0%,100% { opacity: 0.85; } 50% { opacity: 1; } }
+      @keyframes wmDrift   { 0%,100% { transform: translateY(0); }
+                              50%    { transform: translateY(-1.5px); } }
+      @keyframes wmMeter   { 0% { transform: scaleX(0.6); }
+                             50% { transform: scaleX(1); }
+                             100% { transform: scaleX(0.6); } }
+      .wm-text { animation: wmBreathe 10s ease-in-out infinite; }
+      .wm-glyph { display: inline-block; transform-origin: center; }
+      .wm-glyph:nth-child(1) { animation: wmDrift 3.0s ease-in-out infinite; }
+      .wm-glyph:nth-child(2) { animation: wmDrift 3.2s ease-in-out infinite; }
+      .wm-glyph:nth-child(3) { animation: wmDrift 2.8s ease-in-out infinite; }
+      .wm-glyph:nth-child(4) { animation: wmDrift 3.4s ease-in-out infinite; }
+      .wm-glyph:nth-child(5) { animation: wmDrift 2.6s ease-in-out infinite; }
+      .wm-glyph:nth-child(6) { animation: wmDrift 3.6s ease-in-out infinite; }
+      .wm-glyph:nth-child(7) { animation: wmDrift 2.4s ease-in-out infinite; }
+      .wm-glyph:nth-child(8) { animation: wmDrift 3.8s ease-in-out infinite; }
+      .wm-glyph:nth-child(9) { animation: wmDrift 2.7s ease-in-out infinite; }
+      .wm-glyph:nth-child(10) { animation: wmDrift 3.1s ease-in-out infinite; }
+      .wm-meter { transform-origin: left center; animation: wmMeter 4s ease-in-out infinite; }
+    </style>
+  </defs>
+  <text x="240" y="60" text-anchor="middle"
+        font-family="'JetBrains Mono','Roboto Mono','SF Mono',monospace"
+        font-weight="700" font-size="56" letter-spacing="0.04em"
+        fill="url(#wm-fill)" class="wm-text">
+    <tspan class="wm-glyph">B</tspan><tspan class="wm-glyph">E</tspan><tspan class="wm-glyph">A</tspan><tspan class="wm-glyph">T</tspan><tspan class="wm-glyph">W</tspan><tspan class="wm-glyph">E</tspan><tspan class="wm-glyph">A</tspan><tspan class="wm-glyph">V</tspan><tspan class="wm-glyph">E</tspan><tspan class="wm-glyph">R</tspan>
+  </text>
+  <!-- Underline meter — sweeps to suggest live VU -->
+  <rect x="60" y="74" width="360" height="3" rx="1.5" fill="url(#wm-meter)" class="wm-meter"/>
+</svg>

@@ -70,6 +70,28 @@ vi.mock('tone', () => ({
     stop: vi.fn(),
     dispose: vi.fn(),
   })),
+  // Effect/modulator mocks needed by SynthFactory.createModulator() invoked from
+  // Beatweaver._ensureColumnModulator() during launchPreset()
+  Chorus: vi.fn(() => ({
+    connect: vi.fn().mockReturnThis(),
+    disconnect: vi.fn(),
+    dispose: vi.fn(),
+    start: vi.fn().mockReturnThis(),
+    wet: { value: 0.5 },
+  })),
+  Phaser: vi.fn(() => ({
+    connect: vi.fn().mockReturnThis(),
+    disconnect: vi.fn(),
+    dispose: vi.fn(),
+    wet: { value: 0.5 },
+  })),
+  Tremolo: vi.fn(() => ({
+    connect: vi.fn().mockReturnThis(),
+    disconnect: vi.fn(),
+    dispose: vi.fn(),
+    start: vi.fn().mockReturnThis(),
+    wet: { value: 0.5 },
+  })),
   getContext: vi.fn(() => ({ currentTime: 0 })),
   now: vi.fn(() => 0),
   context: { currentTime: 0 },
@@ -148,6 +170,11 @@ describe('Preset Launch', () => {
       dispose: vi.fn(),
     };
 
+    // Disable preset launch debounce so toggle-off tests don't get suppressed.
+    // Production debounce (150ms) protects against MIDI hardware double-triggers;
+    // tests fire programmatically and need every call to land.
+    bw._presetDebounceMs = 0;
+
     await bw.init();
   });
 
@@ -225,17 +252,22 @@ describe('Preset Launch', () => {
 
       bw.launchPreset(preset.id);
 
-      expect(mockSynthEngine.playPreset).toHaveBeenCalledWith(preset.id);
+      // Beatweaver routes audio through a per-column modulator's input node, so
+      // playPreset receives a (presetId, destination) pair.
+      expect(mockSynthEngine.playPreset).toHaveBeenCalledWith(preset.id, expect.anything());
       expect(bw.activePresets.has(preset.id)).toBe(true);
     });
 
-    it('announces preset on launch', () => {
+    it('announces preset on launch (uses fire line if present, else announcement)', () => {
       const presets = getAllPresets();
       const preset = presets[0];
 
       bw.launchPreset(preset.id);
 
-      expect(mockAnnouncer.announce).toHaveBeenCalledWith(preset.announcement);
+      // Field precedence: preset.fire (design handoff DJ-talk) → preset.announcement (legacy) → preset.name
+      const expected = preset.fire || preset.announcement || preset.name;
+      // Beatweaver._announce() calls announcer.announce(text, priority=false)
+      expect(mockAnnouncer.announce).toHaveBeenCalledWith(expected, false);
     });
 
     it('toggles off if preset already active', () => {
@@ -244,6 +276,11 @@ describe('Preset Launch', () => {
 
       bw.launchPreset(preset.id); // Launch
       expect(bw.activePresets.has(preset.id)).toBe(true);
+
+      // Clear the per-preset launch debounce so the second call isn't dropped.
+      // Two synchronous calls fall well under _presetDebounceMs (150ms), and that
+      // debounce is what protects against MIDI double-triggers in real use.
+      bw._lastPresetLaunch.clear();
 
       bw.launchPreset(preset.id); // Toggle off
       expect(bw.activePresets.has(preset.id)).toBe(false);
@@ -311,7 +348,7 @@ describe('Preset Launch', () => {
     it('setBankUp increments bank', () => {
       bw.setBankUp();
       expect(bw.presetBank).toBe(1);
-      expect(mockAnnouncer.announce).toHaveBeenCalledWith('Bank 2');
+      expect(mockAnnouncer.announce).toHaveBeenCalledWith('Bank 2', false);
     });
 
     it('setBankUp does not exceed max bank', () => {
@@ -326,7 +363,7 @@ describe('Preset Launch', () => {
       bw.presetBank = 1;
       bw.setBankDown();
       expect(bw.presetBank).toBe(0);
-      expect(mockAnnouncer.announce).toHaveBeenCalledWith('Bank 1');
+      expect(mockAnnouncer.announce).toHaveBeenCalledWith('Bank 1', false);
     });
 
     it('setBankDown does not go below 0', () => {
