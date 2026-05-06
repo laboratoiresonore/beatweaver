@@ -115,7 +115,7 @@ export function VoiceControls({
               onChange={(e) => setUrlDraft(e.target.value)}
               onBlur={handleUrlBlur}
               onKeyDown={handleUrlKeyDown}
-              placeholder="http://192.168.0.100:5001"
+              placeholder="http://localhost:5001"
               className="flex-1 bg-dj-bg border border-dj-border rounded text-[10px] text-white p-1 focus:border-dj-accent outline-none placeholder-dj-muted"
             />
             <div

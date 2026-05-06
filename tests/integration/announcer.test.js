@@ -53,7 +53,7 @@ describe('Announcer', () => {
       expect(announcer.volume).toBe(0.8);
       expect(announcer.queue).toEqual([]);
       expect(announcer.speaking).toBe(false);
-      expect(announcer.DEBOUNCE_MS).toBe(2000);
+      expect(announcer.DEBOUNCE_MS).toBe(500);
     });
 
     it('stores kobold URL', () => {
@@ -107,7 +107,7 @@ describe('Announcer', () => {
   });
 
   describe('debouncing', () => {
-    it('skips duplicate text within 2 seconds', () => {
+    it('skips duplicate text within debounce window', () => {
       announcer.announce('BPM locked: 120');
       const firstCallCount = mockSpeechSynthesis.speak.mock.calls.length;
 
@@ -120,8 +120,8 @@ describe('Announcer', () => {
       announcer.announce('BPM locked: 120');
       const firstCallCount = mockSpeechSynthesis.speak.mock.calls.length;
 
-      // Advance past debounce
-      vi.advanceTimersByTime(2100);
+      // Advance past debounce window (DEBOUNCE_MS = 500ms)
+      vi.advanceTimersByTime(announcer.DEBOUNCE_MS + 100);
 
       // Reset speaking state so it processes again
       announcer.speaking = false;
@@ -346,6 +346,7 @@ describe('Announcer', () => {
         enabled: true,
         speaking: false,
         queueLength: 0,
+        ttsMode: 'browser',
         koboldAvailable: false,
         koboldUrl: 'http://fake-kobold:5001',
         volume: 0.8,

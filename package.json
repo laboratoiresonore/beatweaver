@@ -11,21 +11,20 @@
     "build:linux": "vite build && electron-builder --linux",
     "preview": "vite preview",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "icon:svg": "node scripts/generate-icon.js",
+    "icon:build": "npm run icon:svg && python scripts/build-icons.py"
   },
   "dependencies": {
     "electron-store": "^8.1.0",
-    "essentia.js": "^0.1.3",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "realtime-bpm-analyzer": "^3.0.0",
-    "tone": "^14.8.49",
-    "zustand": "^4.5.0"
+    "tone": "^14.8.49"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.2.1",
     "autoprefixer": "^10.4.17",
-    "canvas": "^3.2.1",
     "concurrently": "^8.2.2",
     "electron": "^28.2.0",
     "electron-builder": "^24.9.1",

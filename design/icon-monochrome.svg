@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  BEATWEAVER monochrome glyph — for system tray, taskbar overlays, and
+  surfaces where the full-color icon is too busy. Strokes only, no fills,
+  matched to the design handoff's `--text` color so it reads on either
+  light or dark chrome.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="Beatweaver">
+  <g fill="none" stroke="#E6E8EE" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+    <!-- Same 4-bar arch as the full icon, simplified -->
+    <rect x="10" y="32" width="6" height="20" rx="1.5"/>
+    <rect x="22" y="22" width="6" height="30" rx="1.5"/>
+    <rect x="34" y="22" width="6" height="30" rx="1.5"/>
+    <rect x="46" y="32" width="6" height="20" rx="1.5"/>
+  </g>
+</svg>

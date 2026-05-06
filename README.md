@@ -1,23 +1,24 @@
 # BeatWeaver
 
-[![License](https://img.shields.io/github/license/laboratoiresonore/beatweaver)](LICENSE)
-[![Build](https://github.com/laboratoiresonore/beatweaver/actions/workflows/build.yml/badge.svg)](https://github.com/laboratoiresonore/beatweaver/actions/workflows/build.yml)
+> A DJ tool for users with **NO musical theory knowledge**. BeatWeaver listens
+> to your DJ mix, detects BPM and key, and lets you layer synthesized sequences
+> on top using the Novation Launch Control XL or on-screen controls.
 
-A DJ tool for users with **NO musical theory knowledge**. BeatWeaver listens to your DJ mix, detects BPM and key, and lets you layer synthesized sequences on top using the Novation Launch Control XL or on-screen controls.
-
-It runs **fully local** — no cloud, no telemetry, no account. Pop your mixer's monitor send into your machine, fire BeatWeaver, hit a launch pad, and the synth instantly auto-transposes to the detected key + locks to the detected BPM.
+[![tests](https://img.shields.io/badge/tests-275%20passing-green)](#testing)
+[![license](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+[![electron](https://img.shields.io/badge/Electron-28-9feaf9)](https://www.electronjs.org/)
+[![tone.js](https://img.shields.io/badge/Tone.js-14.8-f0a100)](https://tonejs.github.io/)
 
 ## Features
 
-- **BPM Detection** — Realtime tempo extraction from your DJ mixer input (AudioWorklet + onset-detection fallback, normalised to a 60–180 BPM target range with stability filtering)
-- **Key Detection** — Chroma-based recognition with Krumhansl–Schmuckler tonal-hierarchy correlation, locked once stable
-- **32 Presets** — 4 categories (Bass / Energy / Texture / FX) × 2 banks (A / B), 4 presets per quadrant
-- **6-instrument SynthFactory** — acid bass, supersaw stab, arp, pad, lead, perc — with FM synthesis, sub-osc, formant filtering, and AI-tuned envelope shaping
-- **Auto-transposition** — every pattern is authored in C and transposed to the live-detected key at trigger time, so your overlay never clashes
-- **MIDI Control** — first-class Novation Launch Control XL integration: hot-plug, LED feedback for active states, pad colour-coding by category, knob mapping per active preset
-- **Per-Column Effects** — Chorus / Phaser / Tremolo modulator slot per instrument column with knob-driven wet/dry
-- **TTS Announcements** — 3-tier voice feedback (Kobold local API → Electron SAPI → browser SpeechSynthesis) for preset names + key changes + status
-- **DJ-pro UI** — Pioneer-CDJ-inspired layout: live VU meter as the BEATWEAVER backdrop, BPM + key readouts, modulator-state LEDs that mirror the controller
+- **BPM Detection** — Automatic tempo detection from DJ mixer input, with confidence-based locking
+- **Key Detection** — Real-time key identification via the Krumhansl-Schmuckler algorithm
+- **32 Presets** — 4 categories (Bass, Energy, Texture, FX) × 2 banks (A/B), all transposed to the detected key
+- **MIDI Control** — Novation Launch Control XL integration with full LED feedback (top/bottom rows, side buttons, knob rings)
+- **Professional Sound** — SynthFactory with acid bass, supersaw, FM, Karplus-Strong pluck, warm pads, and noise percussion
+- **Per-Column Effects** — Chorus / Phaser / Tremolo modulators with seamless type-switching (no audio dropout)
+- **TTS Announcements** — Voice feedback for preset names; choose between Browser TTS, Windows SAPI, or a Kobold-hosted neural voice
+- **Arm / Fire** — Right-click to arm with a spoken cue line, then `F` (or LCXL side-LEFT) to fire every armed preset at once
 
 ## Installation
 
@@ -123,35 +124,76 @@ BeatWeaver **only analyzes** your DJ mix for BPM/key detection. It outputs its s
 ## Keyboard Shortcuts
 
 | Key | Action |
-|-----|--------|
-| `1`–`8` | Toggle preset by current-bank position |
+|---|---|
+| `1`–`8` | Fire preset by position in current bank |
+| Right-click | Arm a preset half (speaks the cue line) |
+| `F` | Fire every armed preset (one mass-trigger gesture) |
 | `Space` | Stop all active presets |
 | `Esc` | Stop audio analysis |
 
 ## Technology Stack
 
-- **Electron** — Desktop app framework (cross-platform: Windows / macOS / Linux)
-- **Tone.js** — Audio synthesis (modulators, polysynths, envelopes, transport scheduling)
-- **React 18** + **Tailwind CSS** — UI framework + styling
-- **Vite** — Dev server + production build
-- **realtime-bpm-analyzer** — AudioWorklet-based BPM extraction
-- **pitchfinder** — Pitch detection (chroma profile feed)
-- **vitest** — Test runner
+- **Electron 28** — Desktop app framework with native audio device access
+- **Tone.js 14** — Audio synthesis, transport, and effects routing
+- **React 18 + Tailwind 3** — UI with fast HMR via Vite
+- **Vite 5** — Build tool
+- **realtime-bpm-analyzer** — In-browser BPM detection
+- **pitchfinder** + Krumhansl-Schmuckler — Key detection
+- **WebMIDI API** — Direct Launch Control XL access (no driver)
+- **Zustand** — State (where component-local hooks aren't enough)
 
-## Privacy
+See `CLAUDE.md` for the full system architecture, MIDI mapping, and synth/preset details.
 
-BeatWeaver runs entirely on your local machine. There is **no cloud component**, no analytics, no telemetry, no account, no remote model. The audio you feed in for analysis never leaves your computer.
+## Testing
 
-The TTS announcer's first tier (Kobold local API) is also entirely local; the Electron SAPI tier uses your OS's offline voice; the browser-SpeechSynthesis fallback is the only tier that *might* round-trip to the OS's text-to-speech engine, depending on your platform.
+275 integration tests cover the audio orchestrator, MIDI dispatch, BPM/key
+analysis pipeline, announcer queue, key transposition, preset library
+integrity, and the arm/fire-armed interaction layer.
 
-## Project status
+```bash
+npm test          # one-shot vitest run
+npm run test:watch # watch mode
+```
 
-Production-ready desktop app. Core dev finished — BPM + key detection, the 32-preset library across 4 categories × 2 banks, MIDI controller integration, modulator effects, TTS, and the DJ-pro UI overhaul are all merged. Open follow-up items live in [`_dev_tools/SESSION_HANDOFF.md`](_dev_tools/SESSION_HANDOFF.md).
+## Design Assets
+
+The brand source-of-truth lives in [`design/`](design/):
+
+- `design/icon.svg` — Full-color app icon (vector source for `build/icon.png`)
+- `design/icon-monochrome.svg` — Single-stroke glyph for tray / favicon
+- `design/wordmark.svg` — BEATWEAVER lockup with meter underline
+- `design/tokens.css` — Canonical design tokens (mirrors `:root` in `src/styles/index.css`)
+- `design/colors.md` — Palette spec with hex, oklch, contrast ratios, and per-color usage
+- `design/icons/{bass,energy,texture,fx,fire}.svg` — Category & UI glyphs
+
+The hi-fi static prototype that drove the visual rebuild lives at
+[`_dev_docs/design_handoff_beatweaver/`](_dev_docs/design_handoff_beatweaver/).
+Issue #3 tracks the remaining production port.
+
+## Project Layout
+
+```
+beatweaver/
+├── electron/             Electron main + preload
+├── src/
+│   ├── App.jsx           Root component
+│   ├── core/             Audio + MIDI + TTS engine
+│   │   ├── Beatweaver.js   Orchestrator (single React-facing API)
+│   │   ├── SynthEngine.js  Tone.js master bus + instrument lifecycle
+│   │   ├── SynthFactory.js Acid bass, supersaw, FM, pluck, warm pad, kick, perc
+│   │   ├── MidiController.js Launch Control XL driver (with LED feedback)
+│   │   ├── AudioAnalysis.js  BPM + Key detection
+│   │   ├── Announcer.js      TTS (Browser / SAPI / Kobold) with effects chain
+│   │   └── Transposer.js     Pattern transposition utilities
+│   ├── presets/index.js  32 presets × {bank, col, row, cue, fire, …}
+│   ├── ui/               React components (PresetGrid, VuMeter, …)
+│   └── styles/index.css  Tailwind + CSS custom properties
+├── tests/integration/    Vitest suites (275 tests)
+├── design/               Brand source-of-truth (SVG, tokens, palette spec)
+├── _dev_docs/            Design handoff reference (do not import from src/)
+└── scripts/              Build helpers (icon generator)
+```
 
 ## License
 
 MIT — see [LICENSE](LICENSE).
-
-## Part of the Laboratoire Sonore ecosystem
-
-BeatWeaver is one of the public projects under [laboratoiresonore](https://github.com/laboratoiresonore). The org's [profile page](https://github.com/laboratoiresonore) lists the other public tools: [Spellcaster](https://github.com/laboratoiresonore/spellcaster) (AI image-generation toolkit for GIMP / DaVinci Resolve / Darktable), [ComfyUI-Spellcaster](https://github.com/laboratoiresonore/ComfyUI-Spellcaster) (architecture-aware ComfyUI custom nodes).

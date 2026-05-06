@@ -4,3 +4,37 @@ release/
 .env
 .env.local
 *.log
+
+# Binary archives never tracked (design handoffs etc. arrive as zips
+# but get extracted to _dev_docs/<name>/ for review). Source-of-truth is
+# the extracted tree, not the archive. Whimweaver.zip 2026-04-30 was the
+# triggering case — tracked once, then moved to _dev_docs/design_handoff_beatweaver/.
+*.zip
+
+# MCP config (contains API keys)
+.mcp.json
+gemini-output/
+
+# Claude Code internal files
+.claude/
+
+# =============================================================================
+# CREDENTIAL SAFETY — defensive against accidental token/PAT commits
+# =============================================================================
+# Even though *.key / *.pem are typically already covered, name common
+# credential-store filenames explicitly so `git add ../<name>` from a sibling
+# repo or `git add -A` from a parent dir cannot drag them in. Real secrets
+# should live in Windows Credential Manager / Keychain, never on disk.
+**/completerepoaccess*
+**/dev_token
+**/.git-credentials
+**/aws*key*
+**/aws_credentials
+**/comfyuiapikey*
+**/github_pat*
+**/*_pat.txt
+**/*.pat
+**/civitai*key*
+**/huggingface*token*
+**/anthropic*key*
+**/openai*key*

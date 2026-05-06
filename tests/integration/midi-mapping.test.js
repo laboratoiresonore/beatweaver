@@ -164,24 +164,29 @@ describe('MIDI Mapping', () => {
   describe('side button dispatch', () => {
     const lcxl = MidiController.LCXL;
 
-    it('dispatches UP', () => {
+    it('dispatches UP press', () => {
       midi._handleMessage({ data: [0xB0, lcxl.SIDE_UP, 127] });
-      expect(midi.onSideButton).toHaveBeenCalledWith('up');
+      expect(midi.onSideButton).toHaveBeenCalledWith('up', true);
     });
 
-    it('dispatches DOWN', () => {
+    it('dispatches DOWN press', () => {
       midi._handleMessage({ data: [0xB0, lcxl.SIDE_DOWN, 127] });
-      expect(midi.onSideButton).toHaveBeenCalledWith('down');
+      expect(midi.onSideButton).toHaveBeenCalledWith('down', true);
     });
 
-    it('dispatches LEFT', () => {
+    it('dispatches LEFT press', () => {
       midi._handleMessage({ data: [0xB0, lcxl.SIDE_LEFT, 127] });
-      expect(midi.onSideButton).toHaveBeenCalledWith('left');
+      expect(midi.onSideButton).toHaveBeenCalledWith('left', true);
     });
 
-    it('dispatches RIGHT', () => {
+    it('dispatches RIGHT press', () => {
       midi._handleMessage({ data: [0xB0, lcxl.SIDE_RIGHT, 127] });
-      expect(midi.onSideButton).toHaveBeenCalledWith('right');
+      expect(midi.onSideButton).toHaveBeenCalledWith('right', true);
+    });
+
+    it('dispatches release with isPress=false', () => {
+      midi._handleMessage({ data: [0xB0, lcxl.SIDE_UP, 0] });
+      expect(midi.onSideButton).toHaveBeenCalledWith('up', false);
     });
   });
 
@@ -260,9 +265,21 @@ describe('MIDI Mapping', () => {
       expect(mockOutput.send).toHaveBeenCalledWith([0x90, lcxl.BUTTONS_TOP[2], lcxl.LED_AMBER]);
     });
 
-    it('allLEDsOff turns off all buttons', () => {
+    it('allLEDsOff turns off all 16 buttons + sends 1 SysEx for 24 knob LEDs', () => {
       const lcxl = MidiController.LCXL;
       midi.allLEDsOff();
+
+      const allButtons = [...lcxl.BUTTONS_TOP, ...lcxl.BUTTONS_BOTTOM];
+      // 16 button Note Off + 1 batched SysEx for all 24 knob LEDs = 17 sends
+      expect(mockOutput.send).toHaveBeenCalledTimes(allButtons.length + 1);
+      allButtons.forEach(note => {
+        expect(mockOutput.send).toHaveBeenCalledWith([0x90, note, lcxl.LED_OFF]);
+      });
+    });
+
+    it('allButtonLEDsOff turns off all 16 buttons (no knob SysEx)', () => {
+      const lcxl = MidiController.LCXL;
+      midi.allButtonLEDsOff();
 
       const allButtons = [...lcxl.BUTTONS_TOP, ...lcxl.BUTTONS_BOTTOM];
       expect(mockOutput.send).toHaveBeenCalledTimes(allButtons.length);

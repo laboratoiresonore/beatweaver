@@ -44,7 +44,8 @@ export class Beatweaver {
       [2, { bank: 'A', row: 0 }],  // TEXTURE column
       [3, { bank: 'A', row: 0 }],  // FX column
     ]);
-    this.readyPresets = new Set();  // Preset IDs currently "ready to fire" (for UI wobble)
+    this.readyPresets = new Set();  // Preset IDs currently "ready to fire" (for UI wobble) — populated by row-selection (MIDI fader / knob)
+    this.armedPresets = new Set();  // Preset IDs explicitly armed via right-click — speak preset.cue on arm, fire on `fireArmed()`
     this._ledPulseTimers = new Map(); // column -> intervalId for pulsating LEDs
 
     // Category names for mapping columns to presets
@@ -52,7 +53,8 @@ export class Beatweaver {
 
     // State change callbacks (for React)
     this.onActivePresetsChange = null;
-    this.onReadyPresetsChange = null; // For UI wobble state
+    this.onReadyPresetsChange = null; // For UI wobble state (row-selection ready)
+    this.onArmedPresetsChange = null; // For UI armed pulsing glow + FIRE button on the cell half
     this.onBpmUpdate = null;
     this.onBpmLock = null;
     this.onBpmChange = null;  // For manual BPM adjustments (doesn't affect lock state)
@@ -932,11 +934,17 @@ export class Beatweaver {
       this.midiController.setLaunchingLED(bankIndex);
     }
 
-    // Announce preset name (or custom announcement if defined)
-    if (preset.announcement) {
-      this._announce(preset.announcement);
-    } else if (preset.name) {
-      this._announce(preset.name);
+    // Announce preset name. Field precedence:
+    //   preset.fire        — long-form DJ-talk fire line ("Trance Gate — open.") from the
+    //                        2026-04-30 design handoff. Speaks on click/MIDI fire today;
+    //                        the future arm-then-fire UI also uses this on FIRE.
+    //   preset.announcement — legacy short label ("Trance gate activated"). Kept as fallback
+    //                        for any preset (or future custom preset) that hasn't been
+    //                        upgraded to the new fire/cue copy.
+    //   preset.name         — last-resort fallback.
+    const announceText = preset.fire || preset.announcement || preset.name;
+    if (announceText) {
+      this._announce(announceText);
     }
 
     // Get column for this preset (BASS=0, ENERGY=1, TEXTURE=2, FX=3)
@@ -983,6 +991,67 @@ export class Beatweaver {
     this.activePresets.clear();
     this._syncLEDs();
     this.onActivePresetsChange?.(new Set());
+  }
+
+  // ============ ARM / FIRE-ARMED (design handoff: right-click to arm, F to fire) ============
+  // Arm = "ready to fire on user gesture". Speaks `preset.cue` on arm so the DJ knows
+  // what's loaded before they pull the trigger. `fireArmed()` launches every armed preset
+  // (each speaks its `preset.fire` line via the normal launchPreset path) and clears the
+  // armed set. The audio side (launch/stop) is unchanged — this is purely an interaction
+  // layer on top of `launchPreset` / `stopPreset`.
+
+  /**
+   * Arm a preset (right-click): adds it to armedPresets, speaks `preset.cue`.
+   * Idempotent — re-arming the same preset re-speaks the cue but does not duplicate state.
+   * @param {string} presetId
+   */
+  armPreset(presetId) {
+    const preset = this._presets.find(p => p.id === presetId);
+    if (!preset) return;
+
+    this.armedPresets.add(presetId);
+    const cueText = preset.cue || `Cue ${preset.name}`;
+    this._announce(cueText);
+    this.onArmedPresetsChange?.(new Set(this.armedPresets));
+  }
+
+  /**
+   * Disarm a preset (right-click on already-armed half).
+   * @param {string} presetId
+   */
+  disarmPreset(presetId) {
+    if (!this.armedPresets.delete(presetId)) return;
+    this.onArmedPresetsChange?.(new Set(this.armedPresets));
+  }
+
+  /**
+   * Toggle armed state. The PresetGrid wires right-click to this.
+   * @param {string} presetId
+   */
+  toggleArmPreset(presetId) {
+    if (this.armedPresets.has(presetId)) {
+      this.disarmPreset(presetId);
+    } else {
+      this.armPreset(presetId);
+    }
+  }
+
+  /**
+   * Fire every armed preset in one gesture (F key, side-button LEFT, on-screen FIRE-ALL).
+   * Each preset goes through the normal launchPreset path, so the per-preset `fire` line
+   * is spoken and column-modulator routing is preserved. The armed set is cleared after.
+   * @returns {string[]} List of preset IDs that fired
+   */
+  fireArmed() {
+    if (this.armedPresets.size === 0) return [];
+    const toFire = Array.from(this.armedPresets);
+    // Clear armed BEFORE firing so the UI loses the pulse glow as each cell goes active.
+    this.armedPresets.clear();
+    this.onArmedPresetsChange?.(new Set());
+    for (const presetId of toFire) {
+      this.launchPreset(presetId);
+    }
+    return toFire;
   }
 
   /**
@@ -1251,7 +1320,7 @@ export class Beatweaver {
 
   /**
    * Set Kobold TTS server URL
-   * @param {string} url - Full URL (e.g. 'http://192.168.0.100:5001')
+   * @param {string} url - Full URL (e.g. 'http://<host>:<port>')
    * @returns {Promise<boolean>} Whether Kobold is available at the new URL
    */
   async setKoboldUrl(url) {

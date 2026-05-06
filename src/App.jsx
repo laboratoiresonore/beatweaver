@@ -53,6 +53,7 @@ function BeatweaverApp() {
   const [initialized, setInitialized] = useState(false);
   const [activePresets, setActivePresets] = useState(new Set());
   const [readyPresets, setReadyPresets] = useState(new Set()); // Phase 4: MIDI-selected presets ready to fire
+  const [armedPresets, setArmedPresets] = useState(new Set()); // Right-click armed presets (design handoff)
   const [currentKey, setCurrentKey] = useState('C');
   const [bpm, setBpm] = useState(125);
 
@@ -87,7 +88,7 @@ function BeatweaverApp() {
 
   // TTS mode and Kobold
   const [ttsMode, setTtsMode] = useState('browser'); // 'browser' or 'kobold'
-  const [koboldUrl, setKoboldUrl] = useState('http://192.168.0.100:5001');
+  const [koboldUrl, setKoboldUrl] = useState('');
   const [koboldAvailable, setKoboldAvailable] = useState(false);
   const [saveStatus, setSaveStatus] = useState('idle');
 
@@ -188,6 +189,11 @@ function BeatweaverApp() {
       setReadyPresets(new Set(presets));
     };
 
+    // Right-click armed presets (design handoff: arm/cue + FIRE)
+    beatweaver.onArmedPresetsChange = (presets) => {
+      setArmedPresets(new Set(presets));
+    };
+
     // Visual announcements (shown in GUI alongside TTS)
     beatweaver.onAnnouncement = (text) => {
       setAnnouncement(text);
@@ -231,21 +237,34 @@ function BeatweaverApp() {
     };
   }, []);
 
-  // Keyboard shortcuts
+  // Keyboard shortcuts. Mirrors the on-screen footer hint strip from the design handoff:
+  //   1-8         fire preset by position in current bank
+  //   F           fire-all-armed (mass-trigger every right-click-armed preset)
+  //   Space       stop all
+  //   Esc         stop audio analysis
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (!initialized || !bw.current) return;
+      // Don't hijack typing inside form controls
+      if (e.target.closest('input, select, textarea')) return;
 
       // Space = Stop All
-      if (e.code === 'Space' && !e.target.closest('input, select')) {
+      if (e.code === 'Space') {
         e.preventDefault();
         stopAll();
         return;
       }
 
-      // 1-8 = Toggle preset by position
+      // F = Fire all armed presets
+      if (e.code === 'KeyF') {
+        e.preventDefault();
+        bw.current.fireArmed();
+        return;
+      }
+
+      // 1-8 = Fire preset by position
       const num = parseInt(e.key, 10);
-      if (num >= 1 && num <= 8 && !e.target.closest('input, select')) {
+      if (num >= 1 && num <= 8) {
         const presets = bw.current._presets;
         const bankStart = bw.current.presetBank * 8;
         const preset = presets[bankStart + num - 1];
@@ -522,6 +541,19 @@ function BeatweaverApp() {
     bw.current.launchPreset(presetId);
   }, []);
 
+  // Right-click on a preset half: toggle armed state + speak cue line.
+  const armPreset = useCallback((presetId) => {
+    if (!bw.current) return;
+    bw.current.toggleArmPreset(presetId);
+  }, []);
+
+  // Click the FIRE pip on an armed half: fire just that preset.
+  const fireArmedSingle = useCallback((presetId) => {
+    if (!bw.current) return;
+    bw.current.disarmPreset(presetId);
+    bw.current.launchPreset(presetId);
+  }, []);
+
   const stopAll = useCallback(() => {
     if (!bw.current) return;
     bw.current.stopAll();
@@ -678,7 +710,7 @@ function BeatweaverApp() {
         </div>
         <p className="text-dj-text-secondary mb-2 text-sm tracking-wide">Auto-detect BPM and Key from audio</p>
         <p className="text-dj-muted text-xs mb-8 tracking-wider">
-          Keys 1-8: presets | Space: stop all | MIDI: Launch Control XL
+          Keys 1-8: fire preset · Right-click: arm · F: fire armed · Space: stop all · MIDI: Launch Control XL
         </p>
         <button onClick={handleCountdownClick} className="start-button">
           {countdown !== null && countdown > 0 ? (
@@ -848,7 +880,10 @@ function BeatweaverApp() {
       <PresetGrid
         activePresets={activePresets}
         readyPresets={readyPresets}
+        armedPresets={armedPresets}
         onTogglePreset={togglePreset}
+        onArmPreset={armPreset}
+        onFireArmed={fireArmedSingle}
       />
 
       {/* Bottom Visualization Strip */}

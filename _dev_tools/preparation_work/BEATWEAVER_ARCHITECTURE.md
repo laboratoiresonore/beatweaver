@@ -471,7 +471,7 @@ class LaunchControlXL {
 ```javascript
 // announcer.js
 class Announcer {
-  constructor(koboldUrl = "http://192.168.0.100:5001") {
+  constructor(koboldUrl = "") {  // user supplies via settings (e.g. http://<host>:<port>)
     this.koboldUrl = koboldUrl;
     this.enabled = true;
     this.audioContext = new AudioContext();

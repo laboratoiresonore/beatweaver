@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- ENERGY column glyph: rising lightning bolt. Color: --cat-energy #E0641B -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32" role="img" aria-label="Energy">
+  <g fill="#E0641B" stroke="#E0641B" stroke-width="1" stroke-linejoin="round">
+    <path d="M18 2 L 8 18 L 14 18 L 12 30 L 24 14 L 18 14 Z"/>
+  </g>
+</svg>
