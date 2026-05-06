@@ -98,7 +98,7 @@ SIDE RIGHT:       BPM unlock override
 - [ ] Fix `type: "module"` warning in package.json
 
 ### Plan Location
-Full 15-day implementation plan: `C:\Users\burto\.claude\plans\agile-roaming-prism.md`
+Full 15-day implementation plan kept in the maintainer's local notes (not in this repo).
 
 ---
 
