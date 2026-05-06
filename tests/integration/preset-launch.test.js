@@ -70,6 +70,39 @@ vi.mock('tone', () => ({
     stop: vi.fn(),
     dispose: vi.fn(),
   })),
+  // Per-column modulator effects (Chorus / Phaser / Tremolo) added to
+  // SynthFactory in the post-Day-13 DJ-pro UI overhaul. The mocks need
+  // to expose .connect/.disconnect/.dispose/.start so SynthFactory's
+  // ``new Tone.Chorus(...).start()`` chain works under vitest.
+  Chorus: vi.fn(() => ({
+    connect: vi.fn().mockReturnThis(),
+    disconnect: vi.fn(),
+    dispose: vi.fn(),
+    start: vi.fn().mockReturnThis(),
+    wet: { value: 0.5 },
+    frequency: { value: 2 },
+    depth: 0.7,
+  })),
+  Phaser: vi.fn(() => ({
+    connect: vi.fn().mockReturnThis(),
+    disconnect: vi.fn(),
+    dispose: vi.fn(),
+    start: vi.fn().mockReturnThis(),
+    wet: { value: 0.5 },
+    frequency: { value: 0.5 },
+    octaves: 3,
+    Q: { value: 10 },
+    baseFrequency: 350,
+  })),
+  Tremolo: vi.fn(() => ({
+    connect: vi.fn().mockReturnThis(),
+    disconnect: vi.fn(),
+    dispose: vi.fn(),
+    start: vi.fn().mockReturnThis(),
+    wet: { value: 0.5 },
+    frequency: { value: 5 },
+    depth: { value: 0.5 },
+  })),
   getContext: vi.fn(() => ({ currentTime: 0 })),
   now: vi.fn(() => 0),
   context: { currentTime: 0 },
@@ -152,9 +185,20 @@ describe('Preset Launch', () => {
   });
 
   describe('preset library', () => {
-    it('has 16 presets', () => {
+    it('has 32 presets across 4 categories x 2 banks', () => {
+      // Library was expanded post-Day-13 to 4 cats x 2 banks x 4 presets
+      // (~/Beatweaver/src/presets/index.js: 8 BASS + 8 ENERGY + 8 TEXTURE
+      // + 8 FX = 32 presets, 16 per bank).
       const presets = getAllPresets();
-      expect(presets.length).toBe(16);
+      expect(presets.length).toBe(32);
+      const cats = {};
+      const banks = {};
+      for (const p of presets) {
+        cats[p.category] = (cats[p.category] || 0) + 1;
+        banks[p.bank]    = (banks[p.bank] || 0) + 1;
+      }
+      expect(cats).toEqual({ BASS: 8, ENERGY: 8, TEXTURE: 8, FX: 8 });
+      expect(banks).toEqual({ A: 16, B: 16 });
     });
 
     it('all presets have required fields', () => {
