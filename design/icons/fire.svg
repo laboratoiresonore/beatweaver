@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- FIRE pip — used on armed preset halves. Square edges, accent stroke. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="16" height="16" role="img" aria-label="Fire">
+  <g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M8 1 L 5 6 L 7 6 L 5 11 L 11 5 L 9 5 L 11 1 Z" fill="currentColor"/>
+  </g>
+</svg>

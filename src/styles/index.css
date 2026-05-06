@@ -39,6 +39,59 @@
   --cat-energy: #E0641B;
   --cat-texture: #B432FF;
   --cat-fx: #FF127B;
+
+  /* ============================================================
+     2026-04-30 DESIGN-HANDOFF TOKENS (reference layer)
+     Defined alongside the live Pioneer palette so components built
+     against the handoff (per issue #3) can reference them by name
+     without re-deriving values. Live UI still consumes --color-*
+     above; these become primary as components migrate.
+     Source: _dev_docs/design_handoff_beatweaver/Beatweaver.html :root
+     ============================================================ */
+  --hf-bg: #06070A;
+  --hf-bg-2: #0A0B10;
+  --hf-surface: #0E1015;
+  --hf-surface-2: #14161D;
+  --hf-hair: #1B1E27;
+  --hf-hair-strong: #262A36;
+  --hf-text: #E6E8EE;
+  --hf-text-2: #9097A6;
+  --hf-muted: #535A6B;
+
+  /* OKLCH semantic accents — wider P3 gamut, perceptually uniform */
+  --hf-accent: oklch(0.74 0.16 240);
+  --hf-accent-soft: oklch(0.74 0.16 240 / 0.18);
+  --hf-accent-line: oklch(0.74 0.16 240 / 0.45);
+  --hf-warn: oklch(0.78 0.15 75);
+  --hf-ok: oklch(0.78 0.16 155);
+  --hf-danger: oklch(0.66 0.20 24);
+
+  /* Per-category hues (handoff palette — slightly more muted than live) */
+  --hf-bass: oklch(0.72 0.14 160);
+  --hf-energy: oklch(0.74 0.15 60);
+  --hf-texture: oklch(0.68 0.18 305);
+  --hf-fx: oklch(0.72 0.20 355);
+
+  --hf-shadow-1: 0 1px 0 rgba(255,255,255,0.02) inset, 0 0 0 1px var(--hf-hair);
+  --hf-shadow-2: 0 1px 0 rgba(255,255,255,0.03) inset, 0 0 0 1px var(--hf-hair-strong);
+
+  /* Geometry */
+  --hf-radius-panel: 10px;
+  --hf-radius-cell: 6px;
+  --hf-radius-pill: 999px;
+}
+
+/* Optional: enable handoff palette wholesale by adding `class="theme-handoff"`
+   on <body>. Keeps live Pioneer theme as the default — flip when the issue #3
+   port reaches feature parity with the current shipped UI. */
+.theme-handoff {
+  --color-bg: var(--hf-bg);
+  --color-surface: var(--hf-surface);
+  --color-border: var(--hf-hair);
+  --color-border-strong: var(--hf-hair-strong);
+  --color-text: var(--hf-text);
+  --color-text-secondary: var(--hf-text-2);
+  --color-muted: var(--hf-muted);
 }
 
 /* === BASE === */
@@ -332,6 +385,42 @@ body {
 .preset-ready.bank-b {
   --ready-color: rgba(224, 100, 27, 0.5);
   box-shadow: 0 0 12px rgba(224, 100, 27, 0.4);
+}
+
+/* === ARMED (right-click, design handoff) ===
+   Slightly faster pulse than ready (1.4s ease-in-out per spec) and a stronger glow,
+   so an armed half visually outranks a row-selected ready half. */
+@keyframes armedGlow {
+  0%, 100% {
+    box-shadow:
+      inset 0 0 12px var(--armed-color, rgba(80, 180, 255, 0.35)),
+      0 0 14px var(--armed-color, rgba(80, 180, 255, 0.5));
+  }
+  50% {
+    box-shadow:
+      inset 0 0 18px var(--armed-color, rgba(80, 180, 255, 0.5)),
+      0 0 24px var(--armed-color, rgba(80, 180, 255, 0.75));
+  }
+}
+
+.preset-armed {
+  animation: armedGlow 1.4s ease-in-out infinite;
+}
+.preset-armed.bank-a {
+  --armed-color: rgba(16, 177, 118, 0.7);
+}
+.preset-armed.bank-b {
+  --armed-color: rgba(224, 100, 27, 0.7);
+}
+
+/* FIRE pip on the armed half breathes subtly so the eye finds it instantly. */
+.preset-fire-pip {
+  cursor: pointer;
+  animation: armedGlow 1.6s ease-in-out infinite;
+  user-select: none;
+}
+.preset-fire-pip:hover {
+  filter: brightness(1.25);
 }
 
 /* === ANNOUNCEMENT TOAST === */

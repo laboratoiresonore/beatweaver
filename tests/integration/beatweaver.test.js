@@ -81,25 +81,62 @@ const mockAnnouncer = {
   enabled: true,
 };
 
+// Note: bank+row are required for column-based dispatch (selectedPresets default to
+// row 0 of bank A on every column).
 const mockPresets = [
-  { id: 'bass_sub', name: 'Sub Bass', category: 'BASS', instrument: 'subBass', controls: { POWER: { param: 'volume', min: 0, max: 1 }, DARKNESS: { param: 'filterFreq', min: 0, max: 1 } }, announcement: 'Sub bass' },
-  { id: 'bass_reese', name: 'Reese', category: 'BASS', instrument: 'reeseBass', controls: { POWER: { param: 'volume', min: 0, max: 1 } } },
-  { id: 'energy_pulse', name: 'Pulse', category: 'ENERGY', instrument: 'lead', controls: {} },
-  { id: 'energy_drive', name: 'Drive', category: 'ENERGY', instrument: 'lead', controls: {} },
-  { id: 'texture_pad', name: 'Pad', category: 'TEXTURE', instrument: 'pad', controls: {} },
-  { id: 'texture_drift', name: 'Drift', category: 'TEXTURE', instrument: 'pad', controls: {} },
-  { id: 'fx_riser', name: 'Riser', category: 'FX', instrument: 'fx', controls: {} },
-  { id: 'fx_sweep', name: 'Sweep', category: 'FX', instrument: 'fx', controls: {} },
-  // Bank 2
-  { id: 'bass_808', name: '808', category: 'BASS', instrument: 'subBass', controls: {} },
-  { id: 'bass_acid', name: 'Acid', category: 'BASS', instrument: 'lead', controls: {} },
-  { id: 'energy_rave', name: 'Rave', category: 'ENERGY', instrument: 'lead', controls: {} },
-  { id: 'energy_stab', name: 'Stab', category: 'ENERGY', instrument: 'lead', controls: {} },
-  { id: 'texture_choir', name: 'Choir', category: 'TEXTURE', instrument: 'pad', controls: {} },
-  { id: 'texture_noise', name: 'Noise', category: 'TEXTURE', instrument: 'pad', controls: {} },
-  { id: 'fx_impact', name: 'Impact', category: 'FX', instrument: 'fx', controls: {} },
-  { id: 'fx_vinyl', name: 'Vinyl', category: 'FX', instrument: 'fx', controls: {} },
+  // Bank A (rows 0-1 of each category)
+  { id: 'bass_sub',     name: 'Sub Bass', category: 'BASS',    bank: 'A', row: 0, instrument: 'subBass',  controls: { POWER: { param: 'volume', min: 0, max: 1 }, DARKNESS: { param: 'filterFreq', min: 0, max: 1 } }, announcement: 'Sub bass' },
+  { id: 'bass_reese',   name: 'Reese',    category: 'BASS',    bank: 'A', row: 1, instrument: 'reeseBass',controls: { POWER: { param: 'volume', min: 0, max: 1 } } },
+  { id: 'energy_pulse', name: 'Pulse',    category: 'ENERGY',  bank: 'A', row: 0, instrument: 'lead',     controls: {} },
+  { id: 'energy_drive', name: 'Drive',    category: 'ENERGY',  bank: 'A', row: 1, instrument: 'lead',     controls: {} },
+  { id: 'texture_pad',  name: 'Pad',      category: 'TEXTURE', bank: 'A', row: 0, instrument: 'pad',      controls: {} },
+  { id: 'texture_drift',name: 'Drift',    category: 'TEXTURE', bank: 'A', row: 1, instrument: 'pad',      controls: {} },
+  { id: 'fx_riser',     name: 'Riser',    category: 'FX',      bank: 'A', row: 0, instrument: 'fx',       controls: {} },
+  { id: 'fx_sweep',     name: 'Sweep',    category: 'FX',      bank: 'A', row: 1, instrument: 'fx',       controls: {} },
+  // Bank B (rows 0-1 of each category)
+  { id: 'bass_808',     name: '808',      category: 'BASS',    bank: 'B', row: 0, instrument: 'subBass',  controls: {} },
+  { id: 'bass_acid',    name: 'Acid',     category: 'BASS',    bank: 'B', row: 1, instrument: 'lead',     controls: {} },
+  { id: 'energy_rave',  name: 'Rave',     category: 'ENERGY',  bank: 'B', row: 0, instrument: 'lead',     controls: {} },
+  { id: 'energy_stab',  name: 'Stab',     category: 'ENERGY',  bank: 'B', row: 1, instrument: 'lead',     controls: {} },
+  { id: 'texture_choir',name: 'Choir',    category: 'TEXTURE', bank: 'B', row: 0, instrument: 'pad',      controls: {} },
+  { id: 'texture_noise',name: 'Noise',    category: 'TEXTURE', bank: 'B', row: 1, instrument: 'pad',      controls: {} },
+  { id: 'fx_impact',    name: 'Impact',   category: 'FX',      bank: 'B', row: 0, instrument: 'fx',       controls: {} },
+  { id: 'fx_vinyl',     name: 'Vinyl',    category: 'FX',      bank: 'B', row: 1, instrument: 'fx',       controls: {} },
 ];
+
+// Mock Tone.js. Beatweaver.js does `import * as Tone from 'tone'` directly for its
+// internal master VU analyser; without a stub, Vitest's resolver chokes on Tone's
+// extensionless internal imports (e.g. `tone/build/esm/core/Global`) on Windows.
+// Beatweaver also calls SynthFactory.createModulator() during launchPreset, which
+// constructs Chorus/Phaser/Tremolo — those need stub constructors here.
+const _stubEffect = () => ({
+  connect: vi.fn().mockReturnThis(),
+  disconnect: vi.fn(),
+  dispose: vi.fn(),
+  start: vi.fn().mockReturnThis(),
+  wet: { value: 0.5 },
+});
+vi.mock('tone', () => ({
+  start: vi.fn(),
+  context: { currentTime: 0, sampleRate: 44100, createAnalyser: vi.fn() },
+  getDestination: vi.fn(() => ({ connect: vi.fn(), disconnect: vi.fn() })),
+  connect: vi.fn(),
+  now: vi.fn(() => 0),
+  Chorus: vi.fn(_stubEffect),
+  Phaser: vi.fn(_stubEffect),
+  Tremolo: vi.fn(_stubEffect),
+  Gain: vi.fn(() => ({
+    connect: vi.fn().mockReturnThis(),
+    disconnect: vi.fn(),
+    dispose: vi.fn(),
+    gain: { value: 1 },
+  })),
+}));
+
+// realtime-bpm-analyzer is a worklet import that Vitest's Node env can't load
+vi.mock('realtime-bpm-analyzer', () => ({
+  createRealTimeBpmProcessor: vi.fn(),
+}));
 
 // Mock modules
 vi.mock('../../src/core/SynthEngine.js', () => ({
@@ -180,7 +217,7 @@ describe('Beatweaver Orchestrator', () => {
       mockAudioAnalysis.onBpmLock(128);
 
       expect(mockSynthEngine.setBPM).toHaveBeenCalledWith(128);
-      expect(mockAnnouncer.announce).toHaveBeenCalledWith('BPM locked at 128');
+      expect(mockAnnouncer.announce).toHaveBeenCalledWith('BPM locked at 128', false);
     });
 
     it('fires React callback on BPM lock', () => {
@@ -196,7 +233,7 @@ describe('Beatweaver Orchestrator', () => {
       mockAudioAnalysis.onKeyLock('Am');
 
       expect(mockSynthEngine.setKey).toHaveBeenCalledWith('A');
-      expect(mockAnnouncer.announce).toHaveBeenCalledWith('The key is A minor');
+      expect(mockAnnouncer.announce).toHaveBeenCalledWith('The key is A minor', false);
     });
 
     it('fires React callback on key lock', () => {
@@ -250,18 +287,26 @@ describe('Beatweaver Orchestrator', () => {
     it('launches a preset through synth engine', () => {
       bw.launchPreset('bass_sub');
 
-      expect(mockSynthEngine.playPreset).toHaveBeenCalledWith('bass_sub');
+      // Beatweaver routes the preset through a per-column modulator's input node.
+      // The mock here doesn't expose `masterGain`, so the destination ends up as
+      // the modulator stub's `input` Gain — anything truthy passes.
+      expect(mockSynthEngine.playPreset).toHaveBeenCalledWith('bass_sub', expect.anything());
       expect(bw.activePresets.has('bass_sub')).toBe(true);
     });
 
     it('announces preset with announcement text', () => {
       bw.launchPreset('bass_sub');
 
-      expect(mockAnnouncer.announce).toHaveBeenCalledWith('Sub bass');
+      // Field precedence: preset.fire (design handoff) → preset.announcement → preset.name.
+      // The test mock preset has `announcement: 'Sub bass'` only.
+      expect(mockAnnouncer.announce).toHaveBeenCalledWith('Sub bass', false);
     });
 
     it('toggles off if already active', () => {
       bw.launchPreset('bass_sub');
+      // Clear per-preset launch debounce (150ms) so the second synchronous
+      // launch is treated as a deliberate toggle, not a double-trigger.
+      bw._lastPresetLaunch.clear();
       bw.launchPreset('bass_sub'); // toggle off
 
       expect(mockSynthEngine.stopPreset).toHaveBeenCalledWith('bass_sub');
@@ -289,6 +334,87 @@ describe('Beatweaver Orchestrator', () => {
       bw.launchPreset('bass_sub');
 
       expect(bw.activePresets.has('bass_sub')).toBe(false);
+    });
+  });
+
+  describe('arm / fire-armed (design-handoff right-click flow)', () => {
+    beforeEach(async () => {
+      await bw.init();
+      // Patch a `cue` line on a mock preset so we can assert it was spoken.
+      const subPreset = mockPresets.find(p => p.id === 'bass_sub');
+      subPreset.cue = 'To add more weight, we cue Sub Bass.';
+      subPreset.fire = 'Sub Bass — unleashed.';
+      bw._presets = [...mockPresets];
+    });
+
+    it('armPreset adds to armedPresets and speaks the cue line', () => {
+      bw.armPreset('bass_sub');
+      expect(bw.armedPresets.has('bass_sub')).toBe(true);
+      expect(mockAnnouncer.announce).toHaveBeenCalledWith('To add more weight, we cue Sub Bass.', false);
+    });
+
+    it('armPreset is idempotent on the Set but re-speaks the cue', () => {
+      bw.armPreset('bass_sub');
+      bw.armPreset('bass_sub');
+      expect(bw.armedPresets.size).toBe(1);
+      // Spoken twice — re-arm reaffirms what's loaded.
+      expect(mockAnnouncer.announce).toHaveBeenCalledTimes(2);
+    });
+
+    it('disarmPreset removes from armedPresets without speaking', () => {
+      bw.armPreset('bass_sub');
+      mockAnnouncer.announce.mockClear();
+      bw.disarmPreset('bass_sub');
+      expect(bw.armedPresets.has('bass_sub')).toBe(false);
+      expect(mockAnnouncer.announce).not.toHaveBeenCalled();
+    });
+
+    it('toggleArmPreset arms then disarms on repeat', () => {
+      bw.toggleArmPreset('bass_sub');
+      expect(bw.armedPresets.has('bass_sub')).toBe(true);
+      bw.toggleArmPreset('bass_sub');
+      expect(bw.armedPresets.has('bass_sub')).toBe(false);
+    });
+
+    it('onArmedPresetsChange fires with the current set', () => {
+      const cb = vi.fn();
+      bw.onArmedPresetsChange = cb;
+      bw.armPreset('bass_sub');
+      expect(cb).toHaveBeenCalledWith(expect.any(Set));
+      expect(cb.mock.calls[0][0].has('bass_sub')).toBe(true);
+    });
+
+    it('fireArmed launches every armed preset and clears the set', () => {
+      bw.armPreset('bass_sub');
+      bw.armPreset('energy_pulse');
+      mockAnnouncer.announce.mockClear();
+
+      const fired = bw.fireArmed();
+
+      expect(fired).toEqual(expect.arrayContaining(['bass_sub', 'energy_pulse']));
+      expect(bw.armedPresets.size).toBe(0);
+      expect(mockSynthEngine.playPreset).toHaveBeenCalledWith('bass_sub', expect.anything());
+      expect(mockSynthEngine.playPreset).toHaveBeenCalledWith('energy_pulse', expect.anything());
+    });
+
+    it('fireArmed with nothing armed is a no-op', () => {
+      const fired = bw.fireArmed();
+      expect(fired).toEqual([]);
+      expect(mockSynthEngine.playPreset).not.toHaveBeenCalled();
+    });
+
+    it('armPreset on unknown ID is a silent no-op', () => {
+      bw.armPreset('nonexistent_preset');
+      expect(bw.armedPresets.size).toBe(0);
+      expect(mockAnnouncer.announce).not.toHaveBeenCalled();
+    });
+
+    it('falls back to "Cue <name>" when preset has no cue field', () => {
+      const fxPreset = mockPresets.find(p => p.id === 'fx_riser');
+      delete fxPreset.cue;
+      bw._presets = [...mockPresets];
+      bw.armPreset('fx_riser');
+      expect(mockAnnouncer.announce).toHaveBeenCalledWith('Cue Riser', false);
     });
   });
 
@@ -328,7 +454,7 @@ describe('Beatweaver Orchestrator', () => {
     it('switches up to bank 1', () => {
       bw.setBankUp();
       expect(bw.presetBank).toBe(1);
-      expect(mockAnnouncer.announce).toHaveBeenCalledWith('Bank 2');
+      expect(mockAnnouncer.announce).toHaveBeenCalledWith('Bank 2', false);
     });
 
     it('does not go above max bank', () => {
@@ -343,7 +469,7 @@ describe('Beatweaver Orchestrator', () => {
       bw.setBankDown(); // back to 0
 
       expect(bw.presetBank).toBe(0);
-      expect(mockAnnouncer.announce).toHaveBeenCalledWith('Bank 1');
+      expect(mockAnnouncer.announce).toHaveBeenCalledWith('Bank 1', false);
     });
 
     it('does not go below bank 0', () => {
@@ -378,45 +504,63 @@ describe('Beatweaver Orchestrator', () => {
       await bw.init();
     });
 
-    it('top button launches preset', () => {
-      mockMidiController.onButton(0, true, 1); // button 0, top, velocity 1
-
-      expect(mockSynthEngine.playPreset).toHaveBeenCalledWith('bass_sub');
+    // Top instrument buttons (0-3) use hold-to-turn-off:
+    //   quick press+release (<1s) = LAUNCH the column's selected preset (turn ON only)
+    //   long press+release (>=1s) = STOP it (turn OFF only)
+    // Bottom buttons are function keys (mute / solo / BPM-/+/ analysis toggles), NOT preset stops.
+    it('quick press+release on top button launches column preset', () => {
+      mockMidiController.onButton(0, true, 1); // press
+      mockMidiController.onButton(0, true, 0); // release (quick)
+      expect(mockSynthEngine.playPreset).toHaveBeenCalledWith('bass_sub', expect.anything());
     });
 
-    it('bottom button stops preset', () => {
+    it('held top button (>= 1s) stops the column preset on release', () => {
       bw.launchPreset('bass_sub');
       vi.clearAllMocks();
 
-      mockMidiController.onButton(0, false, 1); // button 0, bottom, velocity 1
+      // Press, then force the recorded press time into the past to simulate a long hold,
+      // then release.
+      mockMidiController.onButton(0, true, 1);
+      const state = bw._instrumentButtonState.get(0);
+      if (state) state.pressTime = Date.now() - bw._HOLD_THRESHOLD_MS - 10;
+      mockMidiController.onButton(0, true, 0);
 
       expect(mockSynthEngine.stopPreset).toHaveBeenCalledWith('bass_sub');
     });
 
-    it('ignores Note Off (velocity 0)', () => {
-      mockMidiController.onButton(0, true, 0);
-      expect(mockSynthEngine.playPreset).not.toHaveBeenCalled();
+    it('bottom button 0 is MUTE ALL (stopAll)', () => {
+      bw.launchPreset('bass_sub');
+      vi.clearAllMocks();
+
+      mockMidiController.onButton(0, false, 1); // bottom button 0 press
+
+      expect(mockSynthEngine.stopAll).toHaveBeenCalled();
     });
 
-    it('fader 7 sets master volume', () => {
-      mockMidiController.onFader(7, 0.75);
-      expect(mockSynthEngine.setMasterVolume).toHaveBeenCalledWith(0.75);
+    it('fader 5 (index 5) sets instrument master volume with +25% headroom', () => {
+      mockMidiController.onFader(5, 0.8);
+      expect(mockSynthEngine.setMasterVolume).toHaveBeenCalledWith(0.8 * 1.25);
     });
 
-    it('side button up switches bank up', () => {
-      mockMidiController.onSideButton('up');
-      expect(bw.presetBank).toBe(1);
+    it('fader 4 (index 4) sets announcer volume', () => {
+      mockMidiController.onFader(4, 0.6);
+      expect(mockAnnouncer.setVolume).toHaveBeenCalledWith(0.6);
     });
 
-    it('side button down switches bank down', () => {
-      bw.setBankUp();
-      mockMidiController.onSideButton('down');
-      expect(bw.presetBank).toBe(0);
+    it('side button up press starts BPM hold (does not flip banks)', () => {
+      // Side up/down moved from bank-switch to BPM hold-to-repeat. Bank flip is now
+      // handled by row-A knobs (per-column). Confirm pressing UP does not change bank.
+      const initialBank = bw.presetBank;
+      mockMidiController.onSideButton('up', true);
+      expect(bw.presetBank).toBe(initialBank);
+      mockMidiController.onSideButton('up', false); // release to clear hold timer
     });
 
-    it('side button left toggles announcer', () => {
-      mockMidiController.onSideButton('left');
-      expect(mockAnnouncer.toggle).toHaveBeenCalled();
+    it('side button left fires the row-fader-selected presets', () => {
+      // Left used to toggle the announcer; it now fires the selected presets across
+      // all 4 columns (the FIRE-ALL gesture, mirroring the on-screen F shortcut).
+      mockMidiController.onSideButton('left', true);
+      expect(mockSynthEngine.playPreset).toHaveBeenCalled();
     });
 
     it('MIDI connection fires React callback', () => {
@@ -426,7 +570,7 @@ describe('Beatweaver Orchestrator', () => {
       mockMidiController.onConnectionChange(true, 'Launch Control XL');
 
       expect(callback).toHaveBeenCalledWith(true, 'Launch Control XL');
-      expect(mockAnnouncer.announce).toHaveBeenCalledWith('Controller connected');
+      expect(mockAnnouncer.announce).toHaveBeenCalledWith('Controller connected', false);
     });
   });
 
@@ -460,12 +604,12 @@ describe('Beatweaver Orchestrator', () => {
 
     it('setKey announces the key', () => {
       bw.setKey('C');
-      expect(mockAnnouncer.announce).toHaveBeenCalledWith('The key is C');
+      expect(mockAnnouncer.announce).toHaveBeenCalledWith('The key is C', false);
     });
 
     it('setKey announces sharp keys correctly', () => {
       bw.setKey('F#');
-      expect(mockAnnouncer.announce).toHaveBeenCalledWith('The key is F sharp');
+      expect(mockAnnouncer.announce).toHaveBeenCalledWith('The key is F sharp', false);
     });
   });
 

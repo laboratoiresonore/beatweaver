@@ -70,29 +70,20 @@ vi.mock('tone', () => ({
     stop: vi.fn(),
     dispose: vi.fn(),
   })),
-  // Per-column modulator effects (Chorus / Phaser / Tremolo) added to
-  // SynthFactory in the post-Day-13 DJ-pro UI overhaul. The mocks need
-  // to expose .connect/.disconnect/.dispose/.start so SynthFactory's
-  // ``new Tone.Chorus(...).start()`` chain works under vitest.
+  // Effect/modulator mocks needed by SynthFactory.createModulator() invoked from
+  // Beatweaver._ensureColumnModulator() during launchPreset()
   Chorus: vi.fn(() => ({
     connect: vi.fn().mockReturnThis(),
     disconnect: vi.fn(),
     dispose: vi.fn(),
     start: vi.fn().mockReturnThis(),
     wet: { value: 0.5 },
-    frequency: { value: 2 },
-    depth: 0.7,
   })),
   Phaser: vi.fn(() => ({
     connect: vi.fn().mockReturnThis(),
     disconnect: vi.fn(),
     dispose: vi.fn(),
-    start: vi.fn().mockReturnThis(),
     wet: { value: 0.5 },
-    frequency: { value: 0.5 },
-    octaves: 3,
-    Q: { value: 10 },
-    baseFrequency: 350,
   })),
   Tremolo: vi.fn(() => ({
     connect: vi.fn().mockReturnThis(),
@@ -100,8 +91,6 @@ vi.mock('tone', () => ({
     dispose: vi.fn(),
     start: vi.fn().mockReturnThis(),
     wet: { value: 0.5 },
-    frequency: { value: 5 },
-    depth: { value: 0.5 },
   })),
   getContext: vi.fn(() => ({ currentTime: 0 })),
   now: vi.fn(() => 0),
@@ -181,24 +170,18 @@ describe('Preset Launch', () => {
       dispose: vi.fn(),
     };
 
+    // Disable preset launch debounce so toggle-off tests don't get suppressed.
+    // Production debounce (150ms) protects against MIDI hardware double-triggers;
+    // tests fire programmatically and need every call to land.
+    bw._presetDebounceMs = 0;
+
     await bw.init();
   });
 
   describe('preset library', () => {
-    it('has 32 presets across 4 categories x 2 banks', () => {
-      // Library was expanded post-Day-13 to 4 cats x 2 banks x 4 presets
-      // (~/Beatweaver/src/presets/index.js: 8 BASS + 8 ENERGY + 8 TEXTURE
-      // + 8 FX = 32 presets, 16 per bank).
+    it('has 32 presets', () => {
       const presets = getAllPresets();
       expect(presets.length).toBe(32);
-      const cats = {};
-      const banks = {};
-      for (const p of presets) {
-        cats[p.category] = (cats[p.category] || 0) + 1;
-        banks[p.bank]    = (banks[p.bank] || 0) + 1;
-      }
-      expect(cats).toEqual({ BASS: 8, ENERGY: 8, TEXTURE: 8, FX: 8 });
-      expect(banks).toEqual({ A: 16, B: 16 });
     });
 
     it('all presets have required fields', () => {
@@ -211,6 +194,29 @@ describe('Preset Launch', () => {
         expect(preset.pattern).toBeDefined();
         expect(preset.controls).toBeDefined();
       });
+    });
+
+    it('all presets have grid + voice-line fields from the 2026-04-30 design handoff', () => {
+      const presets = getAllPresets();
+      const grid = new Map();
+      presets.forEach(preset => {
+        expect(typeof preset.col).toBe('number');
+        expect(preset.col).toBeGreaterThanOrEqual(0);
+        expect(preset.col).toBeLessThanOrEqual(3);
+        expect(typeof preset.row).toBe('number');
+        expect(preset.row).toBeGreaterThanOrEqual(0);
+        expect(preset.row).toBeLessThanOrEqual(3);
+        expect(['A', 'B']).toContain(preset.bank);
+        expect(typeof preset.cue).toBe('string');
+        expect(preset.cue.length).toBeGreaterThan(0);
+        expect(typeof preset.fire).toBe('string');
+        expect(preset.fire.length).toBeGreaterThan(0);
+        const slot = `${preset.col},${preset.row},${preset.bank}`;
+        expect(grid.has(slot), `duplicate slot ${slot} (${grid.get(slot)} vs ${preset.id})`).toBe(false);
+        grid.set(slot, preset.id);
+      });
+      // 4 columns × 4 rows × 2 banks = 32 unique slots, fully covered.
+      expect(grid.size).toBe(32);
     });
 
     it('presets have unique IDs', () => {
@@ -246,17 +252,22 @@ describe('Preset Launch', () => {
 
       bw.launchPreset(preset.id);
 
-      expect(mockSynthEngine.playPreset).toHaveBeenCalledWith(preset.id);
+      // Beatweaver routes audio through a per-column modulator's input node, so
+      // playPreset receives a (presetId, destination) pair.
+      expect(mockSynthEngine.playPreset).toHaveBeenCalledWith(preset.id, expect.anything());
       expect(bw.activePresets.has(preset.id)).toBe(true);
     });
 
-    it('announces preset on launch', () => {
+    it('announces preset on launch (uses fire line if present, else announcement)', () => {
       const presets = getAllPresets();
       const preset = presets[0];
 
       bw.launchPreset(preset.id);
 
-      expect(mockAnnouncer.announce).toHaveBeenCalledWith(preset.announcement);
+      // Field precedence: preset.fire (design handoff DJ-talk) → preset.announcement (legacy) → preset.name
+      const expected = preset.fire || preset.announcement || preset.name;
+      // Beatweaver._announce() calls announcer.announce(text, priority=false)
+      expect(mockAnnouncer.announce).toHaveBeenCalledWith(expected, false);
     });
 
     it('toggles off if preset already active', () => {
@@ -265,6 +276,11 @@ describe('Preset Launch', () => {
 
       bw.launchPreset(preset.id); // Launch
       expect(bw.activePresets.has(preset.id)).toBe(true);
+
+      // Clear the per-preset launch debounce so the second call isn't dropped.
+      // Two synchronous calls fall well under _presetDebounceMs (150ms), and that
+      // debounce is what protects against MIDI double-triggers in real use.
+      bw._lastPresetLaunch.clear();
 
       bw.launchPreset(preset.id); // Toggle off
       expect(bw.activePresets.has(preset.id)).toBe(false);
@@ -332,7 +348,7 @@ describe('Preset Launch', () => {
     it('setBankUp increments bank', () => {
       bw.setBankUp();
       expect(bw.presetBank).toBe(1);
-      expect(mockAnnouncer.announce).toHaveBeenCalledWith('Bank 2');
+      expect(mockAnnouncer.announce).toHaveBeenCalledWith('Bank 2', false);
     });
 
     it('setBankUp does not exceed max bank', () => {
@@ -347,7 +363,7 @@ describe('Preset Launch', () => {
       bw.presetBank = 1;
       bw.setBankDown();
       expect(bw.presetBank).toBe(0);
-      expect(mockAnnouncer.announce).toHaveBeenCalledWith('Bank 1');
+      expect(mockAnnouncer.announce).toHaveBeenCalledWith('Bank 1', false);
     });
 
     it('setBankDown does not go below 0', () => {

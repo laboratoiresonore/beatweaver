@@ -1,91 +1,73 @@
+#!/usr/bin/env node
 /**
- * Generate BeatWeaver app icon
- * Creates a 1024x1024 PNG with a simple waveform design
+ * Beatweaver app-icon source-of-truth: writes `build/icon.svg`, the vector
+ * brand mark used everywhere (favicon, app icon, social).
+ *
+ * The PNG (`build/icon.png`) and ICO (`build/icon.ico`) artifacts that
+ * electron-builder consumes are produced from this SVG by `npm run icon:build`
+ * — that script is intentionally separate so the SVG stays the editable origin.
+ *
+ * Design: 12-bar symmetric waveform (mirrors the BPM signal Beatweaver listens
+ * to), gradient fills in the four category hues (BASS / ENERGY / TEXTURE / FX),
+ * "BW" wordmark beneath. Renders cleanly at 16 px and at 1024 px.
  */
-const { createCanvas } = require('canvas');
-const fs = require('fs');
-const path = require('path');
+import { writeFileSync, mkdirSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const buildDir = join(__dirname, '..', 'build');
+mkdirSync(buildDir, { recursive: true });
 
 const SIZE = 1024;
-const canvas = createCanvas(SIZE, SIZE);
-const ctx = canvas.getContext('2d');
+// Symmetric peak shape — matches the audio analysis signal that drives the app.
+const HEIGHTS = [0.15, 0.25, 0.40, 0.60, 0.85, 0.95, 0.95, 0.85, 0.60, 0.40, 0.25, 0.15];
+const BAR_W = SIZE * 0.05;
+const GAP = SIZE * 0.02;
+const TOTAL_W = HEIGHTS.length * BAR_W + (HEIGHTS.length - 1) * GAP;
+const START_X = (SIZE - TOTAL_W) / 2;
+const CENTER_Y = SIZE / 2;
+const BAR_R = BAR_W / 3;
 
-// Background gradient (dark purple to deep blue)
-const bgGradient = ctx.createLinearGradient(0, 0, SIZE, SIZE);
-bgGradient.addColorStop(0, '#1a0a2e');
-bgGradient.addColorStop(0.5, '#16213e');
-bgGradient.addColorStop(1, '#0f0f23');
+const bars = HEIGHTS.map((h, i) => {
+  const x = START_X + i * (BAR_W + GAP);
+  const barH = SIZE * 0.5 * h;
+  const y = CENTER_Y - barH / 2;
+  return `<rect x="${x.toFixed(2)}" y="${y.toFixed(2)}" width="${BAR_W.toFixed(2)}" height="${barH.toFixed(2)}" rx="${BAR_R.toFixed(2)}" fill="url(#bw-bar)" />`;
+}).join('\n  ');
 
-// Rounded rectangle background
-ctx.fillStyle = bgGradient;
-roundRect(ctx, 0, 0, SIZE, SIZE, SIZE * 0.2);
-ctx.fill();
+const svg = `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${SIZE} ${SIZE}" width="${SIZE}" height="${SIZE}" role="img" aria-label="Beatweaver">
+  <defs>
+    <linearGradient id="bw-bg" x1="0" y1="0" x2="${SIZE}" y2="${SIZE}" gradientUnits="userSpaceOnUse">
+      <stop offset="0%"  stop-color="#1A0A2E" />
+      <stop offset="50%" stop-color="#16213E" />
+      <stop offset="100%" stop-color="#0F0F23" />
+    </linearGradient>
+    <linearGradient id="bw-bar" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"  stop-color="#00F5FF" />
+      <stop offset="50%" stop-color="#7B2CBF" />
+      <stop offset="100%" stop-color="#FF006E" />
+    </linearGradient>
+    <filter id="bw-glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="6" result="blur" />
+      <feMerge>
+        <feMergeNode in="blur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+  </defs>
+  <rect width="${SIZE}" height="${SIZE}" rx="${SIZE * 0.2}" fill="url(#bw-bg)" />
+  <g filter="url(#bw-glow)">
+  ${bars}
+  </g>
+  <text x="${SIZE / 2}" y="${SIZE * 0.87}" text-anchor="middle"
+        font-family="'JetBrains Mono', 'Roboto Mono', 'SF Mono', monospace"
+        font-weight="700" font-size="${SIZE * 0.12}" letter-spacing="0.06em" fill="#FFFFFF">BW</text>
+</svg>
+`;
 
-// Draw waveform bars
-const barCount = 12;
-const barWidth = SIZE * 0.05;
-const gap = SIZE * 0.02;
-const totalWidth = barCount * barWidth + (barCount - 1) * gap;
-const startX = (SIZE - totalWidth) / 2;
-const centerY = SIZE / 2;
-
-// Waveform heights (symmetric pattern)
-const heights = [0.15, 0.25, 0.4, 0.6, 0.85, 0.95, 0.95, 0.85, 0.6, 0.4, 0.25, 0.15];
-
-for (let i = 0; i < barCount; i++) {
-  const x = startX + i * (barWidth + gap);
-  const barHeight = SIZE * 0.5 * heights[i];
-  const y = centerY - barHeight / 2;
-
-  // Gradient for each bar (cyan to magenta)
-  const barGradient = ctx.createLinearGradient(x, y, x, y + barHeight);
-  barGradient.addColorStop(0, '#00f5ff');
-  barGradient.addColorStop(0.5, '#7b2cbf');
-  barGradient.addColorStop(1, '#ff006e');
-
-  ctx.fillStyle = barGradient;
-  roundRect(ctx, x, y, barWidth, barHeight, barWidth / 3);
-  ctx.fill();
-
-  // Glow effect
-  ctx.shadowColor = '#00f5ff';
-  ctx.shadowBlur = 20;
-  ctx.shadowOffsetX = 0;
-  ctx.shadowOffsetY = 0;
-}
-
-// Reset shadow
-ctx.shadowBlur = 0;
-
-// Add "BW" text at bottom
-ctx.fillStyle = '#ffffff';
-ctx.font = `bold ${SIZE * 0.12}px Arial, sans-serif`;
-ctx.textAlign = 'center';
-ctx.textBaseline = 'middle';
-ctx.fillText('BW', SIZE / 2, SIZE * 0.85);
-
-// Helper function for rounded rectangles
-function roundRect(ctx, x, y, width, height, radius) {
-  ctx.beginPath();
-  ctx.moveTo(x + radius, y);
-  ctx.lineTo(x + width - radius, y);
-  ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
-  ctx.lineTo(x + width, y + height - radius);
-  ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
-  ctx.lineTo(x + radius, y + height);
-  ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
-  ctx.lineTo(x, y + radius);
-  ctx.quadraticCurveTo(x, y, x + radius, y);
-  ctx.closePath();
-}
-
-// Save as PNG
-const buildDir = path.join(__dirname, '..', 'build');
-if (!fs.existsSync(buildDir)) {
-  fs.mkdirSync(buildDir, { recursive: true });
-}
-
-const buffer = canvas.toBuffer('image/png');
-fs.writeFileSync(path.join(buildDir, 'icon.png'), buffer);
-
-console.log('Icon generated: build/icon.png (1024x1024)');
+const outPath = join(buildDir, 'icon.svg');
+writeFileSync(outPath, svg);
+console.log(`Wrote ${outPath} (${svg.length} bytes)`);
+console.log('Next: run `npm run icon:build` to rasterize SVG → PNG/ICO for electron-builder.');

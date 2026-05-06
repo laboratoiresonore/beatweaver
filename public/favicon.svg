@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="Beatweaver">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="64" y2="64" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#1A0A2E"/>
+      <stop offset="50%" stop-color="#16213E"/>
+      <stop offset="100%" stop-color="#0F0F23"/>
+    </linearGradient>
+    <linearGradient id="bar" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#00F5FF"/>
+      <stop offset="50%" stop-color="#7B2CBF"/>
+      <stop offset="100%" stop-color="#FF006E"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="13" fill="url(#bg)"/>
+  <!-- 12-bar symmetric waveform mirrors the BPM signal Beatweaver listens to.
+       Heights match build/icon.svg so favicon and app icon read identically. -->
+  <g fill="url(#bar)">
+    <rect x="9"  y="28.4" width="3.2" height="7.2" rx="1.1"/>
+    <rect x="13.5" y="26"  width="3.2" height="12"  rx="1.1"/>
+    <rect x="18"  y="22.4" width="3.2" height="19.2" rx="1.1"/>
+    <rect x="22.5" y="17.6" width="3.2" height="28.8" rx="1.1"/>
+    <rect x="27"  y="11.6" width="3.2" height="40.8" rx="1.1"/>
+    <rect x="31.5" y="9.6"  width="3.2" height="44.8" rx="1.1"/>
+    <rect x="36"  y="9.6"  width="3.2" height="44.8" rx="1.1"/>
+    <rect x="40.5" y="11.6" width="3.2" height="40.8" rx="1.1"/>
+    <rect x="45"  y="17.6" width="3.2" height="28.8" rx="1.1"/>
+    <rect x="49.5" y="22.4" width="3.2" height="19.2" rx="1.1"/>
+    <rect x="54"  y="26"  width="3.2" height="12"  rx="1.1"/>
+    <rect x="58.5" y="28.4" width="3.2" height="7.2" rx="1.1"/>
+  </g>
+</svg>

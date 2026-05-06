@@ -1,0 +1,69 @@
+/* =============================================================================
+ * BEATWEAVER DESIGN TOKENS
+ *
+ * Single source of truth for the live app's visual language. Mirrors the
+ * 2026-04-30 design handoff exactly so that the production CSS, the static
+ * design reference (`_dev_docs/design_handoff_beatweaver/Beatweaver.html`),
+ * and the brand assets in `design/*.svg` all stay in lockstep.
+ *
+ * The runtime app loads these via `src/styles/index.css`. This file is the
+ * canonical reference — when the design moves, edit here first.
+ * ============================================================================= */
+
+:root {
+  /* ===== SURFACES ===== */
+  --bg:         #06070A;
+  --bg-2:       #0A0B10;
+  --surface:    #0E1015;
+  --surface-2:  #14161D;
+
+  /* ===== BORDERS ===== */
+  --hair:        #1B1E27;
+  --hair-strong: #262A36;
+
+  /* ===== TEXT ===== */
+  --text:    #E6E8EE;
+  --text-2:  #9097A6;
+  --muted:   #535A6B;
+
+  /* ===== SEMANTIC (oklch-tunable hue, do not approximate) ===== */
+  --accent: oklch(0.74 0.16 240);   /* primary CTA / armed glow */
+  --warn:   oklch(0.78 0.15 75);    /* row-selected ready */
+  --ok:     oklch(0.78 0.16 155);   /* lock confirmed */
+  --danger: oklch(0.66 0.20 24);    /* STOP ALL */
+
+  /* ===== CATEGORY (4 columns) ===== */
+  --bass:    #10B176;  /* mint/teal — sub & wobble */
+  --energy:  #E0641B;  /* amber     — leads & risers */
+  --texture: #B432FF;  /* violet    — pads & atmosphere */
+  --fx:      #FF127B;  /* magenta   — impacts & sweeps */
+
+  /* ===== TYPOGRAPHY ===== */
+  --font-body:    'Space Grotesk', ui-sans-serif, system-ui, sans-serif;
+  --font-mono:    'JetBrains Mono', ui-monospace, 'Cascadia Code', Consolas, monospace;
+
+  /* ===== GEOMETRY ===== */
+  --radius-panel: 10px;
+  --radius-cell:  6px;
+  --radius-pill:  999px;
+  --hair-width:   1px;
+
+  /* ===== ANIMATION TIMING (matches design handoff README §Animations) ===== */
+  --t-armed-glow:        1.4s;
+  --t-fire-halo:         1.6s;
+  --t-wordmark-breath:  10s;
+  --t-glyph-drift:       3s;
+  --t-vu-lerp:           0.18; /* unitless inertia coefficient for swept-needle gauges */
+
+  /* ===== VU METER ZONES (Pioneer-derived) ===== */
+  --meter-green:  #00C853;
+  --meter-amber:  #FFB300;
+  --meter-orange: #FF6D00;
+  --meter-red:    #FF1744;
+  --meter-clip:   #FF0000;
+
+  /* ===== WAVEFORM (rekordbox 3-band) ===== */
+  --waveform-low:  #0055E1;
+  --waveform-mid:  #FFA600;
+  --waveform-high: #50B4FF;
+}

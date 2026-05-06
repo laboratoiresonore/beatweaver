@@ -211,7 +211,10 @@ export const PRESETS = {
       SQUELCH: { param: 'filterQ', default: 0.3, min: 0, max: 1 }
     },
     color: '#10B176', // green
-    announcement: 'Dropping the bass'
+    announcement: 'Dropping the bass',
+    col: 0, row: 0,
+    cue: 'To pump up the floor, we cue Pump It.',
+    fire: 'Pump It — go.'
   },
 
   ACID_WOBBLE: {
@@ -237,7 +240,10 @@ export const PRESETS = {
       SQUELCH: { param: 'filterQ', default: 0.7, min: 0, max: 1 }
     },
     color: '#10B176',
-    announcement: 'Acid wobble engaged'
+    announcement: 'Acid wobble engaged',
+    col: 0, row: 1,
+    cue: 'To get that wobble going, we cue Acid.',
+    fire: 'Acid — wobbling now.'
   },
 
   SUB_PULSE: {
@@ -262,7 +268,10 @@ export const PRESETS = {
       DARKNESS: { param: 'filterFreq', default: 0.2, min: 0, max: 1 }
     },
     color: '#10B176',
-    announcement: 'Sub bass pulse'
+    announcement: 'Sub bass pulse',
+    col: 0, row: 2,
+    cue: 'For a steady low pulse, we cue Sub Pulse.',
+    fire: 'Sub Pulse — locked in.'
   },
 
   BASS_STAB: {
@@ -287,7 +296,10 @@ export const PRESETS = {
       DARKNESS: { param: 'filterFreq', default: 0.7, min: 0, max: 1 }
     },
     color: '#10B176',
-    announcement: 'Bass stab'
+    announcement: 'Bass stab',
+    col: 0, row: 3,
+    cue: 'To punch the bottom, we cue Bass Stab.',
+    fire: 'Stab — hit.'
   },
 
   // === ENERGY (4) - Upgraded with SynthFactory ===
@@ -317,7 +329,10 @@ export const PRESETS = {
       ATTACK: { param: 'attack', default: 0.1, min: 0, max: 0.5 }
     },
     color: '#E0641B', // yellow
-    announcement: 'Trance gate activated'
+    announcement: 'Trance gate activated',
+    col: 1, row: 0,
+    cue: 'To lift the energy, we cue Trance Gate.',
+    fire: 'Trance Gate — open.'
   },
 
   RISING_ENERGY: {
@@ -346,7 +361,10 @@ export const PRESETS = {
       BRIGHTNESS: { param: 'filterFreq', default: 0.7, min: 0, max: 1 }
     },
     color: '#E0641B',
-    announcement: 'Building energy'
+    announcement: 'Building energy',
+    col: 1, row: 1,
+    cue: 'To start building, we cue Rising.',
+    fire: 'Rising — climbing.'
   },
 
   BUILD_UP: {
@@ -361,7 +379,10 @@ export const PRESETS = {
       INTENSITY: { param: 'decay', default: 0.5, min: 0, max: 1 }
     },
     color: '#E0641B',
-    announcement: 'Building up'
+    announcement: 'Building up',
+    col: 1, row: 2,
+    cue: 'To set up the drop, we cue Build Up.',
+    fire: 'Build Up — go.'
   },
 
   DROP_IMPACT: {
@@ -389,7 +410,10 @@ export const PRESETS = {
       POWER: { param: 'volume', default: 0.8, min: 0, max: 1 }
     },
     color: '#E0641B',
-    announcement: 'Drop it'
+    announcement: 'Drop it',
+    col: 1, row: 3,
+    cue: 'To break the build, we cue the Drop.',
+    fire: 'Drop — now!'
   },
 
   // === TEXTURE (4) - Upgraded with SynthFactory ===
@@ -417,7 +441,10 @@ export const PRESETS = {
       WARMTH: { param: 'filterFreq', default: 0.5, min: 0, max: 1 }
     },
     color: '#B432FF', // purple
-    announcement: 'Dream cloud floating'
+    announcement: 'Dream cloud floating',
+    col: 2, row: 0,
+    cue: 'For more atmosphere, we cue Dream Cloud.',
+    fire: 'Dream Cloud — drifting.'
   },
 
   SHIMMER: {
@@ -439,7 +466,10 @@ export const PRESETS = {
       SPARKLE: { param: 'filterFreq', default: 0.8, min: 0, max: 1 }
     },
     color: '#B432FF',
-    announcement: 'Shimmer effect'
+    announcement: 'Shimmer effect',
+    col: 2, row: 1,
+    cue: 'For a brighter top, we cue Shimmer.',
+    fire: 'Shimmer — glowing.'
   },
 
   DARK_FOG: {
@@ -466,7 +496,10 @@ export const PRESETS = {
       DEPTH: { param: 'filterFreq', default: 0.3, min: 0, max: 1 }
     },
     color: '#B432FF',
-    announcement: 'Dark fog rolling in'
+    announcement: 'Dark fog rolling in',
+    col: 2, row: 2,
+    cue: 'To darken the room, we cue Dark Fog.',
+    fire: 'Dark Fog — settling.'
   },
 
   RHYTHM_PULSE: {
@@ -489,7 +522,10 @@ export const PRESETS = {
       GRIT: { param: 'filterFreq', default: 0.5, min: 0, max: 1 }
     },
     color: '#B432FF',
-    announcement: 'Rhythm pulse'
+    announcement: 'Rhythm pulse',
+    col: 2, row: 3,
+    cue: 'To add motion, we cue Pulse.',
+    fire: 'Pulse — beating.'
   },
 
   // === FX (4) ===
@@ -505,7 +541,10 @@ export const PRESETS = {
       PUNCH: { param: 'attack', default: 0.1, min: 0, max: 0.3 }
     },
     color: '#FF127B', // orange
-    announcement: 'Stab attack'
+    announcement: 'Stab attack',
+    col: 3, row: 0,
+    cue: 'For a quick accent, we cue Stab Hit.',
+    fire: 'Stab Hit — bang.'
   },
 
   FILTER_SWEEP: {
@@ -520,7 +559,10 @@ export const PRESETS = {
       SWEEP: { param: 'filterFreq', default: 0.5, min: 0, max: 1 }
     },
     color: '#FF127B',
-    announcement: 'Filter sweep'
+    announcement: 'Filter sweep',
+    col: 3, row: 1,
+    cue: 'To carve a sweep, we cue Filter Sweep.',
+    fire: 'Filter Sweep — opening.'
   },
 
   TENSION: {
@@ -534,7 +576,10 @@ export const PRESETS = {
       POWER: { param: 'volume', default: 0.5, min: 0, max: 1 }
     },
     color: '#FF127B',
-    announcement: 'Building tension'
+    announcement: 'Building tension',
+    col: 3, row: 2,
+    cue: 'To pull the room tight, we cue Tension.',
+    fire: 'Tension — holding.'
   },
 
   RELEASE: {
@@ -548,7 +593,10 @@ export const PRESETS = {
       POWER: { param: 'volume', default: 0.6, min: 0, max: 1 }
     },
     color: '#FF127B',
-    announcement: 'Release'
+    announcement: 'Release',
+    col: 3, row: 3,
+    cue: 'To let go, we cue Release.',
+    fire: 'Release — exhale.'
   },
 
   // ========== BANK B PRESETS ==========
@@ -566,7 +614,10 @@ export const PRESETS = {
       DEPTH: { param: 'filterFreq', default: 0.1, min: 0, max: 1 }
     },
     color: '#10B176',
-    announcement: 'Deep sub engaged'
+    announcement: 'Deep sub engaged',
+    col: 0, row: 0,
+    cue: 'For more weight, we cue Deep Sub.',
+    fire: 'Deep Sub, engaged.'
   },
 
   GROWL_BASS: {
@@ -581,7 +632,10 @@ export const PRESETS = {
       AGGRESSION: { param: 'filterQ', default: 0.8, min: 0, max: 1 }
     },
     color: '#10B176',
-    announcement: 'Growl bass'
+    announcement: 'Growl bass',
+    col: 0, row: 1,
+    cue: 'To add more bite, we cue Growl.',
+    fire: 'Growl — unleashed.'
   },
 
   REESE_BASS: {
@@ -596,7 +650,10 @@ export const PRESETS = {
       DETUNE: { param: 'filterFreq', default: 0.5, min: 0, max: 1 }
     },
     color: '#10B176',
-    announcement: 'Reese bass rolling'
+    announcement: 'Reese bass rolling',
+    col: 0, row: 2,
+    cue: 'To thicken the low end, we cue Reese.',
+    fire: 'Reese — rolling.'
   },
 
   PLUCK_BASS: {
@@ -611,7 +668,10 @@ export const PRESETS = {
       SNAP: { param: 'attack', default: 0.05, min: 0, max: 0.2 }
     },
     color: '#10B176',
-    announcement: 'Pluck bass'
+    announcement: 'Pluck bass',
+    col: 0, row: 3,
+    cue: 'For a tighter bass, we cue Pluck.',
+    fire: 'Pluck — bouncing.'
   },
 
   // === ENERGY B (4) ===
@@ -627,7 +687,10 @@ export const PRESETS = {
       SPEED: { param: 'filterFreq', default: 0.7, min: 0, max: 1 }
     },
     color: '#E0641B',
-    announcement: 'Siren activated'
+    announcement: 'Siren activated',
+    col: 1, row: 0,
+    cue: 'To call the floor, we cue the Siren.',
+    fire: 'Siren — wailing.'
   },
 
   RISER: {
@@ -642,7 +705,10 @@ export const PRESETS = {
       TENSION: { param: 'filterFreq', default: 0.6, min: 0, max: 1 }
     },
     color: '#E0641B',
-    announcement: 'Rising tension'
+    announcement: 'Rising tension',
+    col: 1, row: 1,
+    cue: 'For more tension, we cue Riser.',
+    fire: 'Riser — peaking.'
   },
 
   SNARE_ROLL: {
@@ -657,7 +723,10 @@ export const PRESETS = {
       TIGHTNESS: { param: 'decay', default: 0.3, min: 0, max: 1 }
     },
     color: '#E0641B',
-    announcement: 'Snare roll'
+    announcement: 'Snare roll',
+    col: 1, row: 2,
+    cue: 'To prime the impact, we cue Snare Roll.',
+    fire: 'Snare Roll — rolling.'
   },
 
   WHITE_NOISE: {
@@ -671,7 +740,10 @@ export const PRESETS = {
       POWER: { param: 'volume', default: 0.4, min: 0, max: 1 }
     },
     color: '#E0641B',
-    announcement: 'White noise'
+    announcement: 'White noise',
+    col: 1, row: 3,
+    cue: 'For a clean wash, we cue White Noise.',
+    fire: 'White Noise — sweeping.'
   },
 
   // === TEXTURE B (4) ===
@@ -687,7 +759,10 @@ export const PRESETS = {
       WARMTH: { param: 'filterFreq', default: 0.4, min: 0, max: 1 }
     },
     color: '#B432FF',
-    announcement: 'Choir voices'
+    announcement: 'Choir voices',
+    col: 2, row: 0,
+    cue: 'To add depth, we cue the Choir.',
+    fire: 'Choir — voices in.'
   },
 
   STRINGS: {
@@ -702,7 +777,10 @@ export const PRESETS = {
       ATTACK: { param: 'attack', default: 0.3, min: 0, max: 1 }
     },
     color: '#B432FF',
-    announcement: 'Strings rising'
+    announcement: 'Strings rising',
+    col: 2, row: 1,
+    cue: 'To swell the mid, we cue Strings.',
+    fire: 'Strings — rising.'
   },
 
   BELL_PAD: {
@@ -717,7 +795,10 @@ export const PRESETS = {
       SHIMMER: { param: 'filterFreq', default: 0.8, min: 0, max: 1 }
     },
     color: '#B432FF',
-    announcement: 'Bell pad'
+    announcement: 'Bell pad',
+    col: 2, row: 2,
+    cue: 'For a hopeful glow, we cue Bell Pad.',
+    fire: 'Bell Pad — chiming.'
   },
 
   WIND: {
@@ -732,7 +813,10 @@ export const PRESETS = {
       GUST: { param: 'filterFreq', default: 0.5, min: 0, max: 1 }
     },
     color: '#B432FF',
-    announcement: 'Wind blowing'
+    announcement: 'Wind blowing',
+    col: 2, row: 3,
+    cue: 'For breath and air, we cue Wind.',
+    fire: 'Wind — blowing.'
   },
 
   // === FX B (4) ===
@@ -748,7 +832,10 @@ export const PRESETS = {
       ZAP: { param: 'filterFreq', default: 0.9, min: 0, max: 1 }
     },
     color: '#FF127B',
-    announcement: 'Laser zap'
+    announcement: 'Laser zap',
+    col: 3, row: 0,
+    cue: 'To slice the mix, we cue Laser.',
+    fire: 'Laser — pew.'
   },
 
   WHOOSH: {
@@ -763,7 +850,10 @@ export const PRESETS = {
       SWEEP: { param: 'filterFreq', default: 0.7, min: 0, max: 1 }
     },
     color: '#FF127B',
-    announcement: 'Whoosh'
+    announcement: 'Whoosh',
+    col: 3, row: 1,
+    cue: 'To bridge the bar, we cue Whoosh.',
+    fire: 'Whoosh — flying.'
   },
 
   REVERSE: {
@@ -777,7 +867,10 @@ export const PRESETS = {
       POWER: { param: 'volume', default: 0.5, min: 0, max: 1 }
     },
     color: '#FF127B',
-    announcement: 'Reverse effect'
+    announcement: 'Reverse effect',
+    col: 3, row: 2,
+    cue: 'For a reverse hit, we cue Reverse.',
+    fire: 'Reverse — pulling back.'
   },
 
   GLITCH: {
@@ -792,7 +885,10 @@ export const PRESETS = {
       CHAOS: { param: 'filterFreq', default: 0.5, min: 0, max: 1 }
     },
     color: '#FF127B',
-    announcement: 'Glitch mode'
+    announcement: 'Glitch mode',
+    col: 3, row: 3,
+    cue: 'For some chaos, we cue Glitch.',
+    fire: 'Glitch — fractured.'
   }
 };
 
