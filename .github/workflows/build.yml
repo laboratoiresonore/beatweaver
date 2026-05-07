@@ -101,5 +101,11 @@ jobs:
           files: artifacts/**/*
           draft: false
           prerelease: false
+          # Auto-generate notes from commit/PR titles since the previous
+          # tag. v0.2.1's notes were hand-written via API PATCH; this
+          # makes the next release ship with a basic 'What's Changed'
+          # section out of the box. Hand-edits are still possible after
+          # the fact (gh release edit / API PATCH).
+          generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
