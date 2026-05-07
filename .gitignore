@@ -18,6 +18,13 @@ gemini-output/
 # Claude Code internal files
 .claude/
 
+# Internal dev notes / handoffs / session captures — never published.
+# These directories may exist locally; nothing inside them ships to the
+# public repo. Treat as private engineering scratch.
+CLAUDE.md
+_dev_docs/
+_dev_tools/
+
 # =============================================================================
 # CREDENTIAL SAFETY — defensive against accidental token/PAT commits
 # =============================================================================
