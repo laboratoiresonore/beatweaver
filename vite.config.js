@@ -24,6 +24,24 @@ export default defineConfig({
         drop_debugger: true,
       },
     },
+    // manualChunks split: bundle Tone.js + React into separate
+    // chunks so the browser can parse + cache them independently
+    // of the app bundle. Pre-fix the whole 564 KB ball of yarn
+    // had to parse before the first React render — a measurable
+    // cold-start delay on slower laptops. Splitting into three
+    // chunks (vendor-tone, vendor-react, app) lets the browser
+    // parse them in parallel + reuse cached vendor chunks across
+    // app deploys (each app push only invalidates the app chunk).
+    rollupOptions: {
+      output: {
+        manualChunks: (id) => {
+          if (id.includes('node_modules/tone')) return 'vendor-tone';
+          if (id.includes('node_modules/react')) return 'vendor-react';
+          if (id.includes('node_modules/realtime-bpm-analyzer')) return 'vendor-bpm';
+          if (id.includes('node_modules/pitchfinder')) return 'vendor-pitchfinder';
+        },
+      },
+    },
   },
   resolve: {
     alias: {
