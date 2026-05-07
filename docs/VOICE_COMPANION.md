@@ -74,7 +74,7 @@ The companion is a **child process** spawned by Electron `main.js`. It:
 3. Accepts `POST /tts` `{text}` → returns WAV bytes.
 4. Provides `GET /health` for the renderer to detect availability.
 
-Port `17321` chosen to avoid collisions: Voodoomancer uses 8190/8191, common
+Port `17321` chosen to avoid collisions: another sibling tool on the host machine uses 8190/8191, common
 dev servers use 3000/5173/8080, this is well clear of all of them and isn't
 in any well-known port registry.
 

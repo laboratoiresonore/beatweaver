@@ -1,7 +1,7 @@
 /**
  * Bind to the first available port in a candidate list.
  *
- * v1 uses 17321 (well-known-port-free range, can't collide with Voodoomancer
+ * v1 uses 17321 (well-known-port-free range, can't collide with another locally-running tool
  * 8190/8191 or common dev servers). If something else has it, fall through
  * 17322..17325 before giving up.
  */
