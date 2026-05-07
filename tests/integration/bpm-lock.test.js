@@ -368,4 +368,85 @@ describe('BPM Lock', () => {
       expect(after.bpmConfidence).toBe(1);
     });
   });
+
+  // Public API user-facing controls. The DJ hits these from the UI
+  // when they want to unlock and re-detect (track change, scratch
+  // section, etc.). State machine has to land cleanly.
+  describe('unlockBpm / unlockKey / unlockAll', () => {
+    it('unlockBpm resets BPM state but PRESERVES chroma window', () => {
+      // Lock BPM + start accumulating chroma.
+      analysis.bpmLocked = true;
+      analysis.bpm = 128;
+      analysis.bpmConfidence = 1;
+      analysis.bpmCandidates = [128, 128, 128];
+      analysis.beatTimes = [500, 500];
+      analysis.chromaSamples = 60;
+      analysis.chromaAccumulator = new Array(12).fill(7);
+      analysis.onBpmUpdate = vi.fn();
+
+      analysis.unlockBpm();
+
+      expect(analysis.bpmLocked).toBe(false);
+      expect(analysis.bpm).toBeNull();
+      expect(analysis.bpmConfidence).toBe(0);
+      expect(analysis.bpmCandidates).toEqual([]);
+      expect(analysis.beatTimes).toEqual([]);
+      // Chroma window is intentionally PRESERVED — BPM unlock
+      // shouldn't clobber an in-flight key analysis.
+      expect(analysis.chromaSamples).toBe(60);
+      expect(analysis.chromaAccumulator.every(v => v === 7)).toBe(true);
+      // Update callback fires so the UI surface clears the BPM readout.
+      expect(analysis.onBpmUpdate).toHaveBeenCalledWith({
+        bpm: null, confidence: 0, locked: false,
+      });
+    });
+
+    it('unlockKey resets key state + chroma window', () => {
+      analysis.keyLocked = true;
+      analysis.key = 'F#m';
+      analysis.keyConfidence = 1;
+      analysis.chromaSamples = 80;
+      analysis.chromaAccumulator = new Array(12).fill(3);
+      analysis.keyReadings = ['F#m', 'F#m'];
+      analysis.onKeyUpdate = vi.fn();
+
+      analysis.unlockKey();
+
+      expect(analysis.keyLocked).toBe(false);
+      expect(analysis.key).toBeNull();
+      expect(analysis.keyConfidence).toBe(0);
+      expect(analysis.chromaSamples).toBe(0);
+      // Accumulator wiped so the next analysis starts fresh.
+      expect(analysis.chromaAccumulator.every(v => v === 0)).toBe(true);
+      expect(analysis.keyReadings).toEqual([]);
+      expect(analysis.onKeyUpdate).toHaveBeenCalledWith({
+        key: null, confidence: 0, locked: false,
+      });
+    });
+
+    it('unlockAll calls both unlockBpm + unlockKey', () => {
+      analysis.bpmLocked = true;
+      analysis.keyLocked = true;
+      analysis.bpm = 120;
+      analysis.key = 'C';
+      analysis.onBpmUpdate = vi.fn();
+      analysis.onKeyUpdate = vi.fn();
+
+      analysis.unlockAll();
+
+      expect(analysis.bpmLocked).toBe(false);
+      expect(analysis.keyLocked).toBe(false);
+      expect(analysis.bpm).toBeNull();
+      expect(analysis.key).toBeNull();
+      expect(analysis.onBpmUpdate).toHaveBeenCalled();
+      expect(analysis.onKeyUpdate).toHaveBeenCalled();
+    });
+
+    it('unlockBpm safely handles missing bpmAnalyserNode', () => {
+      // Fallback-mode: no AudioWorklet was set up, so bpmAnalyserNode
+      // is undefined. unlockBpm must NOT throw.
+      analysis.bpmAnalyserNode = null;
+      expect(() => analysis.unlockBpm()).not.toThrow();
+    });
+  });
 });

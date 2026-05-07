@@ -1,13 +1,30 @@
-# BeatWeaver
+<p align="center">
+  <img src="public/wordmark.svg" alt="BeatWeaver" width="420" />
+</p>
 
-> A DJ tool for users with **NO musical theory knowledge**. BeatWeaver listens
-> to your DJ mix, detects BPM and key, and lets you layer synthesized sequences
-> on top using the Novation Launch Control XL or on-screen controls.
+<p align="center">
+  <em>A DJ overlay tool for people who never learned music theory.</em><br/>
+  Detects BPM + key in real time, then lets you layer 32 hand-tuned synth presets in the right key on top of any track — without touching a piano roll.
+</p>
 
-[![tests](https://img.shields.io/badge/tests-299%20passing-green)](#testing)
-[![license](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
-[![electron](https://img.shields.io/badge/Electron-28-9feaf9)](https://www.electronjs.org/)
-[![tone.js](https://img.shields.io/badge/Tone.js-14.8-f0a100)](https://tonejs.github.io/)
+<p align="center">
+  <a href="#testing"><img src="https://img.shields.io/badge/tests-306%20passing-green" alt="tests"/></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="license"/></a>
+  <a href="https://www.electronjs.org/"><img src="https://img.shields.io/badge/Electron-28-9feaf9" alt="electron"/></a>
+  <a href="https://tonejs.github.io/"><img src="https://img.shields.io/badge/Tone.js-14-f0a100" alt="tone.js"/></a>
+  <a href="#midi-controller-novation-launch-control-xl"><img src="https://img.shields.io/badge/MIDI-WebMIDI-7c3aed" alt="MIDI"/></a>
+  <a href="https://github.com/laboratoiresonore/beatweaver/releases"><img src="https://img.shields.io/badge/platforms-macOS%20%7C%20Windows%20%7C%20Linux-lightgrey" alt="platforms"/></a>
+</p>
+
+---
+
+## What it does
+
+You're DJing. Two decks, one mixer. You want to drop a bass line, a riser, a vocal pad, an FX wash — but you can't read music and your synth would need a key signature to make any of that work.
+
+**BeatWeaver listens to your mix and figures out the key for you.** Then every preset you fire transposes itself to that key, automatically. Press a button → it sounds right.
+
+It's a layer on top of your existing DJ rig, not a replacement. Your decks still own the timeline. BeatWeaver just makes the "I want to add something live" button finally make sense.
 
 ## Features
 
@@ -146,7 +163,7 @@ See `CLAUDE.md` for the full system architecture, MIDI mapping, and synth/preset
 
 ## Testing
 
-299 automated integration tests cover the audio orchestrator, MIDI dispatch, BPM/key analysis pipeline, announcer queue, key transposition, modulator pool, preset library integrity, and the arm/fire-armed interaction layer.
+310 automated integration tests cover the audio orchestrator, MIDI dispatch, BPM/key analysis pipeline (incl. chroma cache, kick-band pre-emphasis, adaptive IQR, rolling median, unlock-state-machine), announcer queue, key transposition, modulator pool, preset library integrity, and the arm/fire-armed interaction layer.
 
 ```bash
 npm test          # one-shot vitest run
