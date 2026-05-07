@@ -39,6 +39,18 @@ It's a layer on top of your existing DJ rig, not a replacement. Your decks still
 
 ## Installation
 
+### Quickest path -- universal installer
+
+If you have Python 3.10+:
+
+```bash
+python install.py
+```
+
+`install.py` at the repo root is the [LaboratoireSonore Universal Installer](https://github.com/laboratoiresonore/laboratoiresonore) shim. It fetches the latest installer, picks BeatWeaver's release artifact for your platform, and runs it. One command, every OS.
+
+### Per-platform downloads
+
 <p align="center">
   <a href="https://github.com/laboratoiresonore/beatweaver/releases/latest"><img src="https://img.shields.io/badge/Windows-Download-7c3aed?style=for-the-badge&logo=windows&logoColor=white" alt="Windows installer"/></a>
   &nbsp;
