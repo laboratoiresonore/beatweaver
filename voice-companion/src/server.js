@@ -27,6 +27,7 @@ import {
   piperReleaseAsset,
   piperExecutableName,
 } from './piper-binary.js';
+import { wrapPcmAsWav } from './wav-wrap.js';
 
 const log = (...args) => console.log('[voice-companion]', ...args);
 const warn = (...args) => console.warn('[voice-companion]', ...args);
@@ -154,34 +155,6 @@ async function synthesize({ piperPath, voiceConfig, text }) {
       warn('piper stdin write threw:', err.message);
     }
   });
-}
-
-/**
- * Wrap raw PCM in a minimal RIFF/WAV header so the renderer's <audio>
- * element can play it. Piper emits 22050 Hz 16-bit mono raw PCM by default.
- */
-function wrapPcmAsWav(pcm, { sampleRate, channels, bitsPerSample }) {
-  const byteRate = (sampleRate * channels * bitsPerSample) / 8;
-  const blockAlign = (channels * bitsPerSample) / 8;
-  const dataSize = pcm.length;
-  const buffer = Buffer.alloc(44 + dataSize);
-
-  buffer.write('RIFF', 0);
-  buffer.writeUInt32LE(36 + dataSize, 4);
-  buffer.write('WAVE', 8);
-  buffer.write('fmt ', 12);
-  buffer.writeUInt32LE(16, 16);
-  buffer.writeUInt16LE(1, 20); // PCM
-  buffer.writeUInt16LE(channels, 22);
-  buffer.writeUInt32LE(sampleRate, 24);
-  buffer.writeUInt32LE(byteRate, 28);
-  buffer.writeUInt16LE(blockAlign, 32);
-  buffer.writeUInt16LE(bitsPerSample, 34);
-  buffer.write('data', 36);
-  buffer.writeUInt32LE(dataSize, 40);
-  pcm.copy(buffer, 44);
-
-  return buffer;
 }
 
 async function readJsonBody(req, max = 1024 * 16) {
