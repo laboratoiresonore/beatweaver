@@ -113,6 +113,28 @@ First launch triggers a one-time download:
    tier; if all tiers fail, mark companion `unavailable` and log clearly so
    the renderer can fall back to Browser SpeechSynthesis cleanly.
 
+## Piper binary auto-install
+
+The first launch also installs the Piper TTS binary itself — no manual
+"drop the exe in this folder" step. Implemented in
+[`voice-companion/src/piper-install.js`](../voice-companion/src/piper-install.js):
+
+1. `piperReleaseAsset({ platform, arch })` resolves the right release URL
+   (Win x64 → `.zip`, macOS Intel/ARM and Linux x64/ARM → `.tar.gz`).
+2. `downloadFile()` pulls the archive into `<root>/.piper-install/` with
+   the same atomic-`.partial` semantics as voice models, plus the
+   HTML-404 reject (don't save an error page as `piper.exe`).
+3. `extractArchive()` shells out to the system `tar` — Win10+, macOS,
+   and modern Linux all ship a `tar` capable of both formats, so no
+   new npm dependency is needed.
+4. `findPiperBinary()` locates the executable (handles both flat-zip
+   and `piper/` subdir tarball shapes), then the whole sibling-folder
+   contents (binary + .so/.dll/espeak-ng-data) are renamed into
+   `<root>/bin/`.
+5. `chmodSync(0o755)` on POSIX so the binary is executable.
+6. Idempotent: subsequent launches skip the install when
+   `isPiperInstalled()` reports a >1 MB binary at the target path.
+
 ## Renderer integration
 
 Announcer gets a 4th TTS mode `'companion'` — already opt-in, slotted next to
@@ -175,6 +197,11 @@ All failures logged with `[voice-companion]` prefix so they're greppable.
 - Multilingual auto-detect (English-only first, additional locales come later)
 - Real-time streaming TTS (round-trip per cue is fine — cues are 2–6 words)
 - Automatic update of model weights (manual: delete `voices/` to refresh)
+
+## v2 deltas (landed)
+
+- **Piper binary auto-install** — described above; was the only manual step
+  in v1, now fully automated on first launch.
 
 ## Test plan
 

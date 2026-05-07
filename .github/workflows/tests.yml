@@ -1,6 +1,6 @@
 name: Tests
 
-# Run the vitest suite (362 tests) on every push to main + every PR.
+# Run the vitest suite (374 tests) on every push to main + every PR.
 # Pre-fix the only CI was build.yml (multi-platform release builds
 # triggered on v* tags), which meant test regressions only surfaced
 # during a release attempt — too late to catch in PR review.

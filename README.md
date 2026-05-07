@@ -8,7 +8,7 @@
 </p>
 
 <p align="center">
-  <a href="#testing"><img src="https://img.shields.io/badge/tests-362%20passing-green" alt="tests"/></a>
+  <a href="#testing"><img src="https://img.shields.io/badge/tests-374%20passing-green" alt="tests"/></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="license"/></a>
   <a href="https://www.electronjs.org/"><img src="https://img.shields.io/badge/Electron-42-9feaf9" alt="electron"/></a>
   <a href="https://tonejs.github.io/"><img src="https://img.shields.io/badge/Tone.js-14-f0a100" alt="tone.js"/></a>
@@ -179,7 +179,7 @@ See [`DESIGN.md`](DESIGN.md) for the design tokens + visual contract; the rest o
 
 ## Testing
 
-362 automated integration tests cover the audio orchestrator, MIDI dispatch, BPM/key analysis pipeline (incl. chroma cache, kick-band pre-emphasis, adaptive IQR, rolling median, unlock-state-machine), announcer queue, key transposition, modulator pool, preset library integrity, the arm/fire-armed interaction layer, and the voice-companion (hardware-detect heuristic, model-URL construction, port fallback, response-header validation, WAV-header bytes, companion-mode fallback chain).
+374 automated integration tests cover the audio orchestrator, MIDI dispatch, BPM/key analysis pipeline (incl. chroma cache, kick-band pre-emphasis, adaptive IQR, rolling median, unlock-state-machine), announcer queue, key transposition, modulator pool, preset library integrity, the arm/fire-armed interaction layer, and the voice-companion (hardware-detect heuristic, model-URL construction, port fallback, response-header validation, WAV-header bytes, companion-mode fallback chain).
 
 ```bash
 npm test          # one-shot vitest run
@@ -219,7 +219,7 @@ beatweaver/
 │   ├── presets/index.js  32 presets × {bank, col, row, cue, fire, …}
 │   ├── ui/               React components (PresetGrid, VuMeter, …)
 │   └── styles/index.css  Tailwind + CSS custom properties
-├── tests/integration/    Vitest suites (362 tests across 13 files)
+├── tests/integration/    Vitest suites (374 tests across 14 files)
 ├── voice-companion/      Bundled offline neural TTS (Piper) — child process
 ├── design/               Brand source-of-truth (SVG, tokens, palette spec)
 └── scripts/              Build helpers (icon generator)
@@ -241,7 +241,7 @@ A few load-bearing constraints to know up front:
 
 - **Audio output is generated only.** Input audio is for analysis only — never re-emit incoming audio. (See `src/core/AudioAnalysis.js`.)
 - **The MIDI controller layer is reactive.** Anything that changes UI state must round-trip through the orchestrator so LED feedback stays in sync.
-- **Tests must pass before merge.** `npm test` is the gate; the 362 tests run in ~2s.
+- **Tests must pass before merge.** `npm test` is the gate; the 374 tests run in ~2s.
 
 Bug reports — please include OS, audio interface, MIDI device (if any), and the captured detection state from the on-screen analysis panel when the issue occurred.
 

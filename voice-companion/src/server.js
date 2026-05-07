@@ -27,6 +27,7 @@ import {
   piperReleaseAsset,
   piperExecutableName,
 } from './piper-binary.js';
+import { ensurePiperBinary, isPiperInstalled, piperBinaryPath } from './piper-install.js';
 import { wrapPcmAsWav } from './wav-wrap.js';
 
 const log = (...args) => console.log('[voice-companion]', ...args);
@@ -99,17 +100,32 @@ async function ensureReady(root) {
     log('voice download complete');
   }
 
-  // Piper binary check is intentionally informational here — actually
-  // installing it requires unzip/tar logic we'll add when the rest of the
-  // pipeline is wired. For v1 the user can drop a piper binary into
-  // <root>/bin/ manually as a stopgap.
-  const piperPath = path.join(root, 'bin', piperExecutableName(process.platform));
-  if (!fs.existsSync(piperPath)) {
-    const asset = piperReleaseAsset({
-      platform: process.platform,
-      arch: process.arch,
-    });
-    warn(`piper binary missing at ${piperPath} — download it from ${asset.url} until auto-install lands`);
+  // Piper binary auto-install (v2): downloads the right release archive
+  // for the host platform, extracts it via the system `tar` (built into
+  // Win10+/macOS/Linux), and verifies the binary lands at <root>/bin/.
+  // Idempotent — no-op when already installed.
+  let piperPath;
+  try {
+    if (!isPiperInstalled(root)) {
+      SETUP_STATE.phase = 'downloading-binary';
+      SETUP_STATE.message = 'installing piper binary';
+      piperPath = await ensurePiperBinary(root, {
+        onProgress: ({ received, total, file }) => {
+          SETUP_STATE.progress = { received, total };
+          SETUP_STATE.message = `downloading ${file}`;
+        },
+      });
+    } else {
+      piperPath = piperBinaryPath(root);
+    }
+  } catch (err) {
+    // No published Piper for this platform/arch, network failure, or
+    // tar wasn't available. Surface clearly but don't crash the server —
+    // the renderer can still report 'unavailable' and fall through to
+    // browser TTS.
+    warn(`piper auto-install failed: ${err.message}`);
+    SETUP_STATE.message = `piper install failed: ${err.message}`;
+    piperPath = piperBinaryPath(root); // best-effort path for synth() to fail clearly later
   }
 
   SETUP_STATE.phase = 'ready';

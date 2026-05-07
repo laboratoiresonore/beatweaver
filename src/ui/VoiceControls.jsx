@@ -154,7 +154,7 @@ export function VoiceControls({
           </div>
           {companionAvailable === false && (
             <div className="mt-1 text-[8px] text-dj-muted opacity-80">
-              Companion auto-starts when packaged build runs. In dev: <code>node voice-companion/src/server.js</code>
+              Companion auto-starts when the packaged build runs. First launch downloads the Piper binary + voice model (~70 MB total) — subsequent launches skip the setup. In dev: <code>node voice-companion/src/server.js</code>
             </div>
           )}
         </div>
