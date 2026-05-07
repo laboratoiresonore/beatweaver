@@ -19,6 +19,13 @@ contextBridge.exposeInMainWorld('electronAPI', {
     synthesize: (text, options) => ipcRenderer.invoke('tts:synthesize', text, options),
   },
 
+  // Bundled voice companion (Piper TTS) — start/stop on TTS-mode switch
+  voiceCompanion: {
+    start: () => ipcRenderer.invoke('voice-companion:start'),
+    stop: () => ipcRenderer.invoke('voice-companion:stop'),
+    status: () => ipcRenderer.invoke('voice-companion:status'),
+  },
+
   // Platform info
   platform: process.platform,
 });

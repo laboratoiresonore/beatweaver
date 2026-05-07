@@ -24,6 +24,8 @@ export function MidiStatus({
   koboldUrl,
   onKoboldUrlChange,
   koboldAvailable,
+  companionAvailable,
+  companionReady,
   saveStatus,
 }) {
   const [showVoicePanel, setShowVoicePanel] = useState(false);
@@ -106,6 +108,8 @@ export function MidiStatus({
             koboldUrl={koboldUrl}
             onKoboldUrlChange={onKoboldUrlChange}
             koboldAvailable={koboldAvailable}
+            companionAvailable={companionAvailable}
+            companionReady={companionReady}
             saveStatus={saveStatus}
           />
         )}
