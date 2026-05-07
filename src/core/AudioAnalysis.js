@@ -356,13 +356,29 @@ export class AudioAnalysis {
       const now = performance.now();
       this._fallbackFrameCount++;
 
-      // Calculate bass energy (0-300 Hz) - covers kick drums (60-200 Hz)
-      // FFT size 4096 @ 44100 Hz = ~10.8 Hz per bin, so 28 bins ≈ 300 Hz
+      // ── Bass energy with kick-band pre-emphasis ─────────────────
+      // Kick drums sit in the 60–200 Hz band. Pre-fix this loop
+      // averaged bins 2–27 (≈22–292 Hz) flat, which let the snare
+      // off-beat (≈150–250 Hz fundamental + harmonics) splash
+      // into the bass score and produced false-positive beats on
+      // the off-beat. Now we apply an A-weighting-like emphasis
+      // peaking in the 60–120 Hz kick zone — bins around 6–12 are
+      // weighted 1.5×, bins outside the kick window get the flat
+      // 1.0× weight. Audible effect: kick lock holds across
+      // snare-heavy patterns where it previously drifted.
+      // FFT size 4096 @ 44100 Hz = ~10.8 Hz per bin, so 28 bins ≈ 300 Hz.
       let bassEnergy = 0;
+      let bassWeightTotal = 0;
       for (let i = 2; i < 28; i++) {
-        bassEnergy += frequencyData[i];
+        // Centre weight on bin 9 (~97 Hz, the kick fundamental
+        // sweet spot for 909/Tr-808 samples). Triangle-window
+        // emphasis 1.0 → 1.5 → 1.0 across bins 2..28.
+        const distFromKickCentre = Math.abs(i - 9);
+        const w = distFromKickCentre <= 6 ? 1.0 + (0.5 * (6 - distFromKickCentre) / 6) : 1.0;
+        bassEnergy += frequencyData[i] * w;
+        bassWeightTotal += w;
       }
-      bassEnergy /= 26;
+      bassEnergy /= bassWeightTotal;
 
       // Mid energy (300-2000 Hz) for snare/clap detection
       let midEnergy = 0;
@@ -426,7 +442,20 @@ export class AudioAnalysis {
     const q1 = sorted[Math.floor(sorted.length * 0.25)];
     const q3 = sorted[Math.floor(sorted.length * 0.75)];
     const iqr = q3 - q1;
-    const filtered = this.beatTimes.filter(i => i >= q1 - iqr * 1.5 && i <= q3 + iqr * 1.5);
+    // Adaptive IQR threshold: tighter (1.0×) once we've grown
+    // confident enough in a tempo to stop accepting wide outliers,
+    // looser (2.0×) during the cold-start phase when every
+    // candidate matters. Pre-fix used a flat 1.5× regardless of
+    // confidence — the cold-start was over-strict (rejected
+    // legitimate variance) AND the post-confidence phase was too
+    // lax (let live-DJ-scratch outliers pollute the median).
+    const iqrMultiplier =
+      this.bpmConfidence > 0.7 ? 1.0
+      : this.bpmCandidates.length < 3 ? 2.0
+      : 1.5;
+    const filtered = this.beatTimes.filter(
+      i => i >= q1 - iqr * iqrMultiplier
+        && i <= q3 + iqr * iqrMultiplier);
 
     if (filtered.length < 3) return;
 
@@ -445,8 +474,24 @@ export class AudioAnalysis {
     this.bpmCandidates.push(detectedBpm);
     if (this.bpmCandidates.length > 20) this.bpmCandidates.shift();
 
-    // Always show intermediate BPM estimate during detection
-    this.bpm = detectedBpm;
+    // Show intermediate BPM estimate during detection. Pre-fix this
+    // surfaced the latest single-frame ``detectedBpm``, which jittered
+    // visibly on the UI until the candidate count crossed
+    // MIN_BPM_CANDIDATES (=6) and a median got computed below.
+    // Now we use a rolling median across whatever's accumulated so
+    // far (3+ samples — see the ``return`` guard above), so the UI
+    // surfaces a much more stable progressive BPM during cold-start
+    // AND the BPM-driven beat-flash interval calls land on the
+    // smoother estimate rather than chasing instantaneous spikes.
+    let progressBpm = detectedBpm;
+    if (this.bpmCandidates.length >= 3) {
+      const sortedC = [...this.bpmCandidates].sort((a, b) => a - b);
+      const m = Math.floor(sortedC.length / 2);
+      progressBpm = sortedC.length % 2 === 0
+        ? Math.round((sortedC[m - 1] + sortedC[m]) / 2)
+        : sortedC[m];
+    }
+    this.bpm = progressBpm;
     const progressConfidence = Math.min(0.8, this.bpmCandidates.length / this.MIN_BPM_CANDIDATES * 0.8);
     this.bpmConfidence = progressConfidence;
     this.onBpmUpdate?.({ bpm: this.bpm, confidence: progressConfidence, locked: false });
