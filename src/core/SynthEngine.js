@@ -96,26 +96,49 @@ export class SynthEngine {
     // Master limiter to prevent clipping (catches peaks above -1dB)
     this.masterLimiter = new Tone.Limiter(-1).toDestination();
 
-    // Master compressor for glue and punch (before limiter)
-    // More aggressive settings to prevent clipping with layered instruments
+    // Master compressor for glue + punch (before limiter).
+    // Pre-fix had ratio=6:1, threshold=-18dB — produced visibly
+    // pumping behaviour when bass + pad fired simultaneously and
+    // tipped over the threshold. Pro-DJ practice for a glue
+    // compressor: 4:1 with ~3 dB gain reduction at the loudest
+    // moments. Threshold raised so quiet sections (bass-only,
+    // sustained pad) never compress; only the parallel-instrument
+    // peaks get tucked. Makeup gain of +3 dB compensates for the
+    // RMS loss and keeps perceived loudness at the new ratio.
     this.masterCompressor = new Tone.Compressor({
-      threshold: -18,    // Lower threshold - catch more peaks
-      ratio: 6,          // Higher ratio - more compression
-      attack: 0.002,     // Faster attack - catch transients
-      release: 0.15,     // Faster release - recover quickly
-      knee: 10           // Softer knee - smoother compression
+      threshold: -12,    // Was -18 — only the loudest parallel
+                          // peaks get caught now.
+      ratio: 4,          // Was 6:1 — classic glue-compression
+                          // ratio, no more pumping.
+      attack: 0.005,     // Was 0.002 — let transients through
+                          // (kick-drum punch survives).
+      release: 0.20,     // Was 0.15 — 200 ms is the SSL-bus-comp
+                          // pocket, smoother release than 150 ms.
+      knee: 15           // Was 10 — softer knee = more analog-feel
+                          // gradual onset.
     }).connect(this.masterLimiter);
+
+    // Makeup gain restores the ~3 dB the compressor's lower ratio
+    // gave up, so perceived loudness sits at the same place users
+    // were used to before this commit.
+    this.masterMakeup = new Tone.Gain(1.4).connect(this.masterCompressor);
 
     // Master gain for overall volume control
     // The limiter handles peak protection, so we can push volume higher
     // Increased by 25% from 0.8 to 1.0 for louder output
-    this.masterGain = new Tone.Gain(1.0).connect(this.masterCompressor);
+    this.masterGain = new Tone.Gain(1.0).connect(this.masterMakeup);
 
-    // Shared effects buses (instruments can send to these)
+    // Shared effects buses (instruments can send to these).
+    // preDelay was 10 ms — that's "small room" / "couple of metres"
+    // territory, and stacked too closely with direct sound. 50 ms
+    // approximates a ~17-metre concert-hall first-reflection, which
+    // is what users intuitively hear as "verb on it" rather than
+    // "muddy near-field smear". Decay still 2.5s so the tail length
+    // doesn't change.
     this.reverbBus = new Tone.Reverb({
       decay: 2.5,
       wet: 1,
-      preDelay: 0.01
+      preDelay: 0.05
     }).connect(this.masterGain);
     this.reverbBus.generate(); // Pre-generate impulse response
 
