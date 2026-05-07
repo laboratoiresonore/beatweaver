@@ -611,28 +611,47 @@ function _createEffectOfType(type) {
 }
 
 /**
- * Create a modulator with a persistent input node
- * Instruments connect to the INPUT, which stays stable across effect type changes.
- * When effect type changes, only the internal effect is swapped.
+ * Create a modulator with a persistent input node + a *pre-allocated*
+ * effect pool. Instruments connect to the INPUT, which stays stable
+ * across type changes. When ``setType`` is called, we swap which
+ * pooled effect is wet; the others stay in the graph at wet=0
+ * (silent), so type-flips no longer trigger
+ * dispose-create-reconnect-rewet — they're just two ``.wet.value``
+ * ramps. Pre-fix the dispose/recreate dance produced visible GC
+ * pressure (small audio-thread stalls) when a user rocked a
+ * modulator-type knob across positions, and at worst could drop a
+ * sample frame mid-beat.
  *
  * @param {number} type - MODULATOR_TYPES value (0-2)
  * @param {Tone.Destination|Tone.Node} destination - Where to connect output
  * @returns {Object} - { input, effect, setType, setWet, dispose }
  */
 export function createModulator(type, destination) {
-  // Input gain that instruments connect to - this stays constant!
+  // Input gain that instruments connect to - stays constant.
   const input = new Tone.Gain(1);
 
-  // Current effect
-  let effect = _createEffectOfType(type);
+  // Pre-allocate every modulator type up front so subsequent type
+  // swaps are zero-allocation. Each starts at wet=0 so they're
+  // silent when not selected. ``Gain(1)`` is the "no modulator"
+  // pass-through fallback used for unrecognised types.
+  const pool = {
+    [MODULATOR_TYPES.CHORUS]:  _createEffectOfType(MODULATOR_TYPES.CHORUS),
+    [MODULATOR_TYPES.PHASER]:  _createEffectOfType(MODULATOR_TYPES.PHASER),
+    [MODULATOR_TYPES.TREMOLO]: _createEffectOfType(MODULATOR_TYPES.TREMOLO),
+  };
+
+  // Wire all three pool members in parallel: input → eachEffect → destination.
+  // Only the currently-selected effect has wet > 0; the rest stay silent.
+  for (const e of Object.values(pool)) {
+    input.connect(e);
+    if (destination) {
+      e.connect(destination);
+    }
+  }
+
   let currentType = type;
   let currentWet = 0;
-
-  // Wire up: input -> effect -> destination
-  input.connect(effect);
-  if (destination) {
-    effect.connect(destination);
-  }
+  let effect = pool[currentType] ?? pool[MODULATOR_TYPES.CHORUS];
 
   return {
     // Instruments connect to INPUT (stable across effect changes)
@@ -643,30 +662,22 @@ export function createModulator(type, destination) {
     destination,
 
     /**
-     * Change the effect type without breaking input connections
+     * Change the effect type without breaking input connections.
+     * Zero allocations: just swaps the pointer + walks ``wet``
+     * values (old → 0, new → currentWet) so the change is glitch-free.
      * @param {number} newType - MODULATOR_TYPES value
      */
     setType: (newType) => {
       if (newType === currentType) return;
-
-      // Disconnect input from old effect
-      input.disconnect();
-
-      // Stop and dispose old effect
-      if (effect.stop) effect.stop();
-      effect.dispose();
-
-      // Create new effect
-      effect = _createEffectOfType(newType);
-      currentType = newType;
-
-      // Reconnect: input -> new effect -> destination
-      input.connect(effect);
-      if (destination) {
-        effect.connect(destination);
+      const next = pool[newType];
+      if (!next) return;
+      // Mute the outgoing effect (no allocations).
+      if (effect.wet !== undefined) {
+        effect.wet.value = 0;
       }
-
-      // Restore wet level
+      effect = next;
+      currentType = newType;
+      // Restore the user's wet level on the new effect.
       if (effect.wet !== undefined) {
         effect.wet.value = currentWet;
       }
@@ -683,8 +694,11 @@ export function createModulator(type, destination) {
     dispose: () => {
       input.disconnect();
       input.dispose();
-      if (effect.stop) effect.stop();
-      effect.dispose();
+      // Tear down every pooled effect, not just the active one.
+      for (const e of Object.values(pool)) {
+        if (e.stop) e.stop();
+        e.dispose();
+      }
     }
   };
 }
