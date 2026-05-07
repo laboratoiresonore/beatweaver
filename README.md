@@ -4,21 +4,21 @@
 > to your DJ mix, detects BPM and key, and lets you layer synthesized sequences
 > on top using the Novation Launch Control XL or on-screen controls.
 
-[![tests](https://img.shields.io/badge/tests-275%20passing-green)](#testing)
+[![tests](https://img.shields.io/badge/tests-299%20passing-green)](#testing)
 [![license](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 [![electron](https://img.shields.io/badge/Electron-28-9feaf9)](https://www.electronjs.org/)
 [![tone.js](https://img.shields.io/badge/Tone.js-14.8-f0a100)](https://tonejs.github.io/)
 
 ## Features
 
-- **BPM Detection** — Automatic tempo detection from DJ mixer input, with confidence-based locking
-- **Key Detection** — Real-time key identification via the Krumhansl-Schmuckler algorithm
-- **32 Presets** — 4 categories (Bass, Energy, Texture, FX) × 2 banks (A/B), all transposed to the detected key
-- **MIDI Control** — Novation Launch Control XL integration with full LED feedback (top/bottom rows, side buttons, knob rings)
-- **Professional Sound** — SynthFactory with acid bass, supersaw, FM, Karplus-Strong pluck, warm pads, and noise percussion
-- **Per-Column Effects** — Chorus / Phaser / Tremolo modulators with seamless type-switching (no audio dropout)
-- **TTS Announcements** — Voice feedback for preset names; choose between Browser TTS, Windows SAPI, or a Kobold-hosted neural voice
-- **Arm / Fire** — Right-click to arm with a spoken cue line, then `F` (or LCXL side-LEFT) to fire every armed preset at once
+- **BPM Detection** — Automatic tempo detection from DJ mixer input. Adaptive IQR outlier rejection, kick-band pre-emphasis (60–120 Hz weighted to keep the kick lock from drifting onto snare off-beats), rolling-median candidate smoothing → stable readout from cold-start, lock holds across DJ scratches and tempo ramps.
+- **Key Detection** — Real-time chroma + Krumhansl-Schmuckler correlation. Detection runs at 20 Hz on a 5-second window which re-anchors the moment the BPM locks (fresh post-lock samples → ~10–20% better key accuracy in live transitions).
+- **32 Presets** — 4 categories (Bass, Energy, Texture, FX) × 2 banks (A / B), all transposed to the detected key.
+- **MIDI Control** — Novation Launch Control XL integration with full LED feedback (top/bottom rows, side buttons, knob rings). Hot-plug supported. VU meter on Row C uses change-detection to avoid SysEx flooding when the level is steady.
+- **Professional Sound** — SynthFactory with acid bass, supersaw, FM, Karplus-Strong pluck, warm pads, and noise percussion. SSL-bus-comp-style master glue (4:1 / -12 dB / 5 ms / 200 ms with +3 dB makeup) — no pumping under heavy parallel load. 50 ms reverb pre-delay reads as concert-hall space, not muddy near-field smear.
+- **Per-Column Effects** — Chorus / Phaser / Tremolo modulators with **zero-allocation type-switching** (effect pool stays warm; type swap is just two `wet.value` ramps, no audio dropout, no GC pressure on knob tweaks).
+- **TTS Announcements** — Voice feedback for preset names; choose between Browser TTS, Windows SAPI, or a Kobold-hosted neural voice.
+- **Arm / Fire** — Right-click to arm with a spoken cue line, then `F` (or LCXL side-LEFT) to fire every armed preset at once.
 
 ## Installation
 
@@ -146,14 +146,14 @@ See `CLAUDE.md` for the full system architecture, MIDI mapping, and synth/preset
 
 ## Testing
 
-275 integration tests cover the audio orchestrator, MIDI dispatch, BPM/key
-analysis pipeline, announcer queue, key transposition, preset library
-integrity, and the arm/fire-armed interaction layer.
+299 automated integration tests cover the audio orchestrator, MIDI dispatch, BPM/key analysis pipeline, announcer queue, key transposition, modulator pool, preset library integrity, and the arm/fire-armed interaction layer.
 
 ```bash
 npm test          # one-shot vitest run
 npm run test:watch # watch mode
 ```
+
+For audible verification — the kind the unit tests can't pin — every release should also pass [`tests/manual/LISTENING_TESTS.md`](tests/manual/LISTENING_TESTS.md), a 50-item DJ-runs-it checklist covering detection accuracy, synth quality solo + parallel, reverb space, modulator pool, MIDI hot-plug, sustained load, and edge cases.
 
 ## Design Assets
 
