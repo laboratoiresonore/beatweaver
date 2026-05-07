@@ -1,0 +1,45 @@
+name: Tests
+
+# Run the vitest suite (299+ tests) on every push to main + every PR.
+# Pre-fix the only CI was build.yml (multi-platform release builds
+# triggered on v* tags), which meant test regressions only surfaced
+# during a release attempt — too late to catch in PR review.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  vitest:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run vitest suite
+        run: npm test
+        # vitest exits non-zero on any failure; the suite is fast
+        # (~2 s) so we don't bother sharding.
+
+      - name: Verify production Vite build succeeds
+        # Lightweight signal that the bundle compiles + terser is
+        # happy with the source. Doesn't run electron-builder
+        # (heavy + only matters for releases — build.yml owns that).
+        run: npx vite build
