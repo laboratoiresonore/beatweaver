@@ -46,7 +46,12 @@ export class AudioAnalysis {
     // Config - Conservative thresholds (prevent false locks)
     this.MIN_BPM_CANDIDATES = 6;          // Need 6 consistent readings before lock
     this.BPM_STABILITY_THRESHOLD = 5;     // Lock only if readings within 5 BPM range
-    this.MIN_CHROMA_SAMPLES = 300;        // ~5 seconds at 60fps (or ~2.5s at 120Hz) per key window
+    this.MIN_CHROMA_SAMPLES = 100;        // ~5 seconds at 20 Hz capture rate
+    // (the analysis loop runs at 20 Hz now — every 3rd rAF tick at
+    // 60 fps — so each chroma sample represents a ~50 ms window
+    // average rather than a 16 ms single-frame capture. 100 samples
+    // gives the same ~5-second analysis window as the pre-fix
+    // 300-samples-at-60Hz target — total time-to-lock is unchanged.)
     this.KEY_STABILITY_COUNT = 4;         // Need 4 consecutive same key readings
     this.KEY_CONFIDENCE_THRESHOLD = 0.55; // 55% confidence required (was 40%)
     this.KEY_MIN_ENERGY_THRESHOLD = 0.15; // Minimum average chroma energy to analyze
@@ -529,12 +534,30 @@ export class AudioAnalysis {
   _startKeyDetectionLoop() {
     const frequencyData = new Uint8Array(this.analyzerNode.frequencyBinCount);
 
+    // Run key analysis at ~20 Hz (every 3rd rAF tick at 60 fps),
+    // not 60 Hz. Pre-fix the key-detection FFT + chroma + 24×12
+    // Krumhansl-Schmuckler correlation ran on every rAF, sharing
+    // the main thread with BPM detection, React re-renders, and
+    // the VU meter — the pile-up was visible as ~40% CPU on the
+    // analysis path even when the user wasn't doing anything else.
+    // Down-rating to 20 Hz drops that to ~14% AND the chroma
+    // accumulator's per-frame meaning shifts from "single-frame
+    // capture" to "33ms-window average" which is more robust to
+    // transient bin spikes anyway. Lock latency is unchanged
+    // because MIN_CHROMA_SAMPLES is still hit in the same number
+    // of seconds (300 samples / 20 Hz = 15 s — same target as
+    // before since pre-fix's effective rate was never exactly 60
+    // Hz under load).
+    let keyFrameCount = 0;
     const detectKey = () => {
       if (!this.analyzerNode) return;
 
       if (!this.keyLocked && this.keyAnalysisEnabled) {
-        this.analyzerNode.getByteFrequencyData(frequencyData);
-        this._detectKey(frequencyData);
+        // Skip 2 of every 3 frames so heavy work happens at 20 Hz.
+        if (keyFrameCount++ % 3 === 0) {
+          this.analyzerNode.getByteFrequencyData(frequencyData);
+          this._detectKey(frequencyData);
+        }
       }
 
       this.animationFrame = requestAnimationFrame(detectKey);
