@@ -8,9 +8,9 @@
 </p>
 
 <p align="center">
-  <a href="#testing"><img src="https://img.shields.io/badge/tests-348%20passing-green" alt="tests"/></a>
+  <a href="#testing"><img src="https://img.shields.io/badge/tests-352%20passing-green" alt="tests"/></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="license"/></a>
-  <a href="https://www.electronjs.org/"><img src="https://img.shields.io/badge/Electron-28-9feaf9" alt="electron"/></a>
+  <a href="https://www.electronjs.org/"><img src="https://img.shields.io/badge/Electron-42-9feaf9" alt="electron"/></a>
   <a href="https://tonejs.github.io/"><img src="https://img.shields.io/badge/Tone.js-14-f0a100" alt="tone.js"/></a>
   <a href="#midi-controller-novation-launch-control-xl"><img src="https://img.shields.io/badge/MIDI-WebMIDI-7c3aed" alt="MIDI"/></a>
   <a href="https://github.com/laboratoiresonore/beatweaver/releases"><img src="https://img.shields.io/badge/platforms-macOS%20%7C%20Windows%20%7C%20Linux-lightgrey" alt="platforms"/></a>
@@ -134,8 +134,8 @@ BeatWeaver **only analyzes** your DJ mix for BPM/key detection. It outputs its s
 - Faders 5-8: Reserved
 
 ### Side Buttons
-- UP/DOWN: Switch bank (A/B)
-- LEFT: Toggle TTS announcements
+- UP/DOWN: BPM nudge ±0.1 (hold-to-repeat)
+- LEFT: Fire all armed presets (mass-trigger gesture, same as `F` key)
 - RIGHT: Reserved
 
 ## Keyboard Shortcuts
@@ -150,10 +150,10 @@ BeatWeaver **only analyzes** your DJ mix for BPM/key detection. It outputs its s
 
 ## Technology Stack
 
-- **Electron 28** — Desktop app framework with native audio device access
+- **Electron 42** — Desktop app framework with native audio device access
 - **Tone.js 14** — Audio synthesis, transport, and effects routing
 - **React 18 + Tailwind 3** — UI with fast HMR via Vite
-- **Vite 5** — Build tool
+- **Vite 7** — Build tool
 - **realtime-bpm-analyzer** — In-browser BPM detection
 - **pitchfinder** + Krumhansl-Schmuckler — Key detection
 - **WebMIDI API** — Direct Launch Control XL access (no driver)
@@ -163,7 +163,7 @@ See [`DESIGN.md`](DESIGN.md) for the design tokens + visual contract; the rest o
 
 ## Testing
 
-348 automated integration tests cover the audio orchestrator, MIDI dispatch, BPM/key analysis pipeline (incl. chroma cache, kick-band pre-emphasis, adaptive IQR, rolling median, unlock-state-machine), announcer queue, key transposition, modulator pool, preset library integrity, the arm/fire-armed interaction layer, and the voice-companion (hardware-detect heuristic, model-URL construction, port fallback, companion-mode fallback chain).
+352 automated integration tests cover the audio orchestrator, MIDI dispatch, BPM/key analysis pipeline (incl. chroma cache, kick-band pre-emphasis, adaptive IQR, rolling median, unlock-state-machine), announcer queue, key transposition, modulator pool, preset library integrity, the arm/fire-armed interaction layer, and the voice-companion (hardware-detect heuristic, model-URL construction, port fallback, response-header validation, companion-mode fallback chain).
 
 ```bash
 npm test          # one-shot vitest run
@@ -198,12 +198,12 @@ beatweaver/
 │   │   ├── SynthFactory.js Acid bass, supersaw, FM, pluck, warm pad, kick, perc
 │   │   ├── MidiController.js Launch Control XL driver (with LED feedback)
 │   │   ├── AudioAnalysis.js  BPM + Key detection
-│   │   ├── Announcer.js      TTS (Browser / SAPI / Kobold) with effects chain
+│   │   ├── Announcer.js      TTS (Browser / SAPI / Kobold / Companion) with effects chain
 │   │   └── Transposer.js     Pattern transposition utilities
 │   ├── presets/index.js  32 presets × {bank, col, row, cue, fire, …}
 │   ├── ui/               React components (PresetGrid, VuMeter, …)
 │   └── styles/index.css  Tailwind + CSS custom properties
-├── tests/integration/    Vitest suites (348 tests across 12 files)
+├── tests/integration/    Vitest suites (352 tests across 12 files)
 ├── voice-companion/      Bundled offline neural TTS (Piper) — child process
 ├── design/               Brand source-of-truth (SVG, tokens, palette spec)
 └── scripts/              Build helpers (icon generator)
@@ -225,7 +225,7 @@ A few load-bearing constraints to know up front:
 
 - **Audio output is generated only.** Input audio is for analysis only — never re-emit incoming audio. (See `src/core/AudioAnalysis.js`.)
 - **The MIDI controller layer is reactive.** Anything that changes UI state must round-trip through the orchestrator so LED feedback stays in sync.
-- **Tests must pass before merge.** `npm test` is the gate; the 310 tests run in ~3s.
+- **Tests must pass before merge.** `npm test` is the gate; the 352 tests run in ~2s.
 
 Bug reports — please include OS, audio interface, MIDI device (if any), and the captured detection state from the on-screen analysis panel when the issue occurred.
 

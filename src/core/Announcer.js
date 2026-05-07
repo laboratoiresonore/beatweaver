@@ -430,7 +430,10 @@ export class Announcer {
       }
       await this._playAudio(blob);
     } catch (err) {
-      console.warn('Companion TTS failed, falling back to browser:', err?.message || err);
+      // Log the full error (not just .message) so AbortError, fetch
+      // network errors, and JSON-parse failures all show their stack —
+      // makes it possible to debug companion issues without a debugger.
+      console.warn('Companion TTS failed, falling back to browser:', err);
       try {
         await this._speakBrowser(text);
       } catch (browserErr) {
