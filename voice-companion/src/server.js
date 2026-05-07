@@ -132,6 +132,11 @@ async function synthesize({ piperPath, voiceConfig, text }) {
     piper.stdout.on('data', (chunk) => chunks.push(chunk));
     piper.stderr.on('data', (chunk) => warn('piper stderr:', chunk.toString()));
     piper.on('error', reject);
+    // stdin can EPIPE if piper dies before we finish writing — without an
+    // 'error' listener, that bubbles as an unhandledRejection and crashes the
+    // companion. Catch it here; the 'error'/'close' handlers on `piper`
+    // itself surface the real failure to the caller.
+    piper.stdin.on('error', (err) => warn('piper stdin error:', err.message));
     piper.on('close', (code) => {
       if (code !== 0) {
         reject(new Error(`piper exited ${code}`));
@@ -140,8 +145,14 @@ async function synthesize({ piperPath, voiceConfig, text }) {
       const pcm = Buffer.concat(chunks);
       resolve(wrapPcmAsWav(pcm, { sampleRate: 22050, channels: 1, bitsPerSample: 16 }));
     });
-    piper.stdin.write(text);
-    piper.stdin.end();
+    try {
+      piper.stdin.write(text);
+      piper.stdin.end();
+    } catch (err) {
+      // sync throw is rare (only when stdin is already destroyed); the close
+      // handler will still fire with a non-zero code and reject for us.
+      warn('piper stdin write threw:', err.message);
+    }
   });
 }
 
