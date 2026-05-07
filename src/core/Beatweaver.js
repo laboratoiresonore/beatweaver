@@ -1303,8 +1303,8 @@ export class Beatweaver {
   }
 
   /**
-   * Set TTS mode - user chooses Kobold or Browser
-   * @param {'browser' | 'kobold'} mode
+   * Set TTS mode - user chooses Kobold, Companion, or Browser
+   * @param {'browser' | 'kobold' | 'companion'} mode
    */
   setTTSMode(mode) {
     this.announcer.setTTSMode(mode);
@@ -1312,10 +1312,25 @@ export class Beatweaver {
 
   /**
    * Get current TTS mode
-   * @returns {'browser' | 'kobold'}
+   * @returns {'browser' | 'kobold' | 'companion'}
    */
   getTTSMode() {
     return this.announcer.getTTSMode();
+  }
+
+  /**
+   * Re-test the bundled voice companion's /health endpoint. Called after the
+   * renderer asks Electron main to start the companion subprocess, so the
+   * Announcer learns about it being live without waiting for init.
+   */
+  async refreshCompanionAvailability() {
+    if (typeof this.announcer._testCompanion === 'function') {
+      await this.announcer._testCompanion();
+    }
+    return {
+      available: this.announcer.companionAvailable,
+      ready: this.announcer.companionReady,
+    };
   }
 
   /**

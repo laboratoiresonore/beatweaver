@@ -27,6 +27,8 @@ export function VoiceControls({
   koboldUrl,
   onKoboldUrlChange,
   koboldAvailable,
+  companionAvailable,
+  companionReady,
   saveStatus,
 }) {
   const [urlDraft, setUrlDraft] = useState(koboldUrl || '');
@@ -90,6 +92,17 @@ export function VoiceControls({
             BROWSER
           </button>
           <button
+            onClick={() => onTtsModeChange('companion')}
+            className={`flex-1 px-2 py-1 rounded text-[10px] font-bold font-display tracking-wider transition-colors ${
+              ttsMode === 'companion'
+                ? 'bg-dj-accent text-black'
+                : 'bg-dj-bg border border-dj-border-strong text-dj-muted hover:text-dj-accent hover:border-dj-accent/40'
+            }`}
+            title="Bundled offline neural TTS (Piper) — no LLM server required"
+          >
+            COMPANION
+          </button>
+          <button
             onClick={() => onTtsModeChange('kobold')}
             className={`flex-1 px-2 py-1 rounded text-[10px] font-bold font-display tracking-wider transition-colors ${
               ttsMode === 'kobold'
@@ -101,6 +114,51 @@ export function VoiceControls({
           </button>
         </div>
       </div>
+
+      {/* Companion status — only show in companion mode */}
+      {ttsMode === 'companion' && (
+        <div className="mb-3">
+          <label className="text-[9px] text-dj-muted uppercase tracking-wider block mb-1">
+            Companion Voice
+          </label>
+          <div className="flex items-center gap-2">
+            <div
+              className={`w-2 h-2 rounded-full shrink-0 ${
+                companionAvailable === true && companionReady
+                  ? 'bg-dj-green'
+                  : companionAvailable === true
+                    ? 'bg-dj-warning'
+                    : companionAvailable === null
+                      ? 'bg-dj-warning'
+                      : 'bg-dj-error'
+              }`}
+              title={
+                companionAvailable === true && companionReady
+                  ? 'Companion ready'
+                  : companionAvailable === true
+                    ? 'Companion starting (downloading model)…'
+                    : companionAvailable === null
+                      ? 'Testing companion…'
+                      : 'Companion not running'
+              }
+            />
+            <span className="text-[9px] text-dj-text-secondary">
+              {companionAvailable === true && companionReady
+                ? 'Ready (offline neural)'
+                : companionAvailable === true
+                  ? 'Setting up first-launch model…'
+                  : companionAvailable === null
+                    ? 'Connecting…'
+                    : 'Not running — fallback to browser'}
+            </span>
+          </div>
+          {companionAvailable === false && (
+            <div className="mt-1 text-[8px] text-dj-muted opacity-80">
+              Companion auto-starts when packaged build runs. In dev: <code>node voice-companion/src/server.js</code>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Kobold TTS URL - only show when Kobold mode selected */}
       {ttsMode === 'kobold' && (

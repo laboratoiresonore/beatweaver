@@ -1,0 +1,13 @@
+{
+  "name": "beatweaver-voice-companion",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Offline neural TTS companion for Beatweaver — auto-sized to host hardware",
+  "main": "src/server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node src/server.js",
+    "test": "vitest run"
+  },
+  "license": "MIT"
+}

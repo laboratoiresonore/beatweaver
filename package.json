@@ -66,6 +66,17 @@
     "files": [
       "dist/**/*",
       "electron/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "voice-companion",
+        "to": "voice-companion",
+        "filter": [
+          "**/*",
+          "!node_modules",
+          "!**/*.test.js"
+        ]
+      }
     ]
   },
   "author": "laboratoiresonore",

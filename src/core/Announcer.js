@@ -1,10 +1,10 @@
 /**
  * Announcer - Text-to-speech for DJ feedback
  *
- * TTS priority chain:
- *   1. Kobold API (user's LLM server) - effects always work
- *   2. Electron SAPI (Windows) - generates WAV via IPC for Web Audio effects
- *   3. Browser SpeechSynthesis - no effects (direct OS audio output)
+ * TTS modes (user picks one — no auto-switching):
+ *   - kobold     : user's LLM server (Kobold/Kokoro). Best quality, requires server.
+ *   - companion  : bundled Beatweaver voice-companion (offline neural Piper TTS).
+ *   - browser    : OS SpeechSynthesis fallback (always available, varies by host).
  *
  * Queue system prevents overlapping announcements.
  * Female voice preferred. Reverb + echo effects on audio playback.
@@ -22,8 +22,13 @@ export class Announcer {
     this.queue = [];
     this.speaking = false;
     this.koboldAvailable = null; // null = untested, true/false after first attempt
-    this.ttsMode = 'browser'; // 'browser' or 'kobold' - USER CHOOSES, no auto-detection bullshit
+    this.ttsMode = 'browser'; // 'browser' | 'kobold' | 'companion' — USER CHOOSES
     this.volume = 0.8;
+
+    // Voice companion (bundled offline Piper TTS — see voice-companion/)
+    this.companionUrl = 'http://127.0.0.1:17321';
+    this.companionAvailable = null; // null = untested
+    this.companionReady = false;    // false until /health reports phase==='ready'
 
     // Browser TTS settings - female voice, slightly higher pitch
     this.ttsRate = 1.3;   // Slightly fast - DJ context needs snappy
@@ -54,6 +59,9 @@ export class Announcer {
   async init() {
     // Test Kobold connection (fire and forget)
     this._testKobold().catch(() => {});
+
+    // Test voice companion (fire and forget — runs locally, fast)
+    this._testCompanion().catch(() => {});
 
     // Pick the best browser TTS voice (prefer female)
     try {
@@ -92,6 +100,34 @@ export class Announcer {
     } catch {
       this.koboldAvailable = false;
       console.log('Kobold TTS: not reachable, using browser TTS');
+    }
+  }
+
+  /**
+   * Check if the bundled voice companion (Piper TTS) is up.
+   * `companionAvailable` indicates the HTTP server is responding;
+   * `companionReady` indicates setup (model download) is complete.
+   */
+  async _testCompanion() {
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 1500);
+      const response = await fetch(`${this.companionUrl}/health`, {
+        signal: controller.signal,
+      });
+      clearTimeout(timeout);
+      if (response.ok) {
+        const body = await response.json();
+        this.companionAvailable = true;
+        this.companionReady = !!body.ready;
+        console.log(`Companion TTS: available (ready=${this.companionReady})`);
+      } else {
+        this.companionAvailable = false;
+        this.companionReady = false;
+      }
+    } catch {
+      this.companionAvailable = false;
+      this.companionReady = false;
     }
   }
 
@@ -267,6 +303,9 @@ export class Announcer {
           if (this.ttsMode === 'kobold') {
             console.log('TTS: Using Kobold (user selected)');
             await this._speakKobold(text);
+          } else if (this.ttsMode === 'companion') {
+            console.log('TTS: Using Companion (offline neural)');
+            await this._speakCompanion(text);
           } else {
             // Browser mode = Browser TTS. ALWAYS. No Electron SAPI bullshit.
             console.log('TTS: Using Browser SpeechSynthesis');
@@ -352,6 +391,46 @@ export class Announcer {
       // Kobold failed - mark unavailable and fall back to browser TTS
       console.warn('Kobold TTS failed, falling back to browser:', err?.message || err);
       this.koboldAvailable = false;
+      try {
+        await this._speakBrowser(text);
+      } catch (browserErr) {
+        console.warn('Browser TTS also failed:', browserErr);
+      }
+    }
+  }
+
+  /**
+   * Speak using the bundled voice companion (offline neural Piper TTS).
+   * Falls through to browser TTS on companion failure so the cue still plays.
+   */
+  async _speakCompanion(text) {
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 4000);
+
+      const response = await fetch(`${this.companionUrl}/tts`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text }),
+        signal: controller.signal,
+      });
+      clearTimeout(timeout);
+
+      if (!response.ok) {
+        // 503 = setup not finished yet — fall back without flipping availability
+        if (response.status !== 503) {
+          this.companionAvailable = false;
+        }
+        throw new Error(`Companion TTS returned ${response.status}`);
+      }
+
+      const blob = await response.blob();
+      if (!blob || blob.size < 44) {
+        throw new Error('Companion returned empty audio');
+      }
+      await this._playAudio(blob);
+    } catch (err) {
+      console.warn('Companion TTS failed, falling back to browser:', err?.message || err);
       try {
         await this._speakBrowser(text);
       } catch (browserErr) {
@@ -673,11 +752,11 @@ export class Announcer {
   }
 
   /**
-   * Set TTS mode - user explicitly chooses Kobold or Browser
-   * @param {'browser' | 'kobold'} mode
+   * Set TTS mode - user explicitly chooses Kobold, Companion, or Browser
+   * @param {'browser' | 'kobold' | 'companion'} mode
    */
   setTTSMode(mode) {
-    if (mode === 'kobold' || mode === 'browser') {
+    if (mode === 'kobold' || mode === 'browser' || mode === 'companion') {
       this.ttsMode = mode;
       console.log(`TTS mode set to: ${mode}`);
     } else {
@@ -687,10 +766,23 @@ export class Announcer {
 
   /**
    * Get current TTS mode
-   * @returns {'browser' | 'kobold'}
+   * @returns {'browser' | 'kobold' | 'companion'}
    */
   getTTSMode() {
     return this.ttsMode;
+  }
+
+  /**
+   * Override the companion endpoint (defaults to http://127.0.0.1:17321 —
+   * the port the bundled voice-companion server picks first). Useful if the
+   * companion fell through to a fallback port (17322..17325).
+   */
+  async setCompanionUrl(url) {
+    this.companionUrl = url || 'http://127.0.0.1:17321';
+    this.companionAvailable = null;
+    this.companionReady = false;
+    await this._testCompanion();
+    return this.companionAvailable;
   }
 
   /**
@@ -721,6 +813,9 @@ export class Announcer {
       ttsMode: this.ttsMode,
       koboldAvailable: this.koboldAvailable,
       koboldUrl: this.koboldUrl,
+      companionAvailable: this.companionAvailable,
+      companionReady: this.companionReady,
+      companionUrl: this.companionUrl,
       volume: this.volume,
       pitch: this.ttsPitch,
       rate: this.ttsRate,

@@ -8,7 +8,7 @@
 </p>
 
 <p align="center">
-  <a href="#testing"><img src="https://img.shields.io/badge/tests-306%20passing-green" alt="tests"/></a>
+  <a href="#testing"><img src="https://img.shields.io/badge/tests-348%20passing-green" alt="tests"/></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="license"/></a>
   <a href="https://www.electronjs.org/"><img src="https://img.shields.io/badge/Electron-28-9feaf9" alt="electron"/></a>
   <a href="https://tonejs.github.io/"><img src="https://img.shields.io/badge/Tone.js-14-f0a100" alt="tone.js"/></a>
@@ -34,7 +34,7 @@ It's a layer on top of your existing DJ rig, not a replacement. Your decks still
 - **MIDI Control** — Novation Launch Control XL integration with full LED feedback (top/bottom rows, side buttons, knob rings). Hot-plug supported. VU meter on Row C uses change-detection to avoid SysEx flooding when the level is steady.
 - **Professional Sound** — SynthFactory with acid bass, supersaw, FM, Karplus-Strong pluck, warm pads, and noise percussion. SSL-bus-comp-style master glue (4:1 / -12 dB / 5 ms / 200 ms with +3 dB makeup) — no pumping under heavy parallel load. 50 ms reverb pre-delay reads as concert-hall space, not muddy near-field smear.
 - **Per-Column Effects** — Chorus / Phaser / Tremolo modulators with **zero-allocation type-switching** (effect pool stays warm; type swap is just two `wet.value` ramps, no audio dropout, no GC pressure on knob tweaks).
-- **TTS Announcements** — Voice feedback for preset names; choose between Browser TTS, Windows SAPI, or a Kobold-hosted neural voice.
+- **TTS Announcements** — Voice feedback for preset names. Pick from Browser TTS, Windows SAPI, a Kobold-hosted neural voice, or the **bundled offline neural Companion** (auto-sized to your hardware via [Piper TTS](https://github.com/rhasspy/piper) — no LLM server required). See [`docs/VOICE_COMPANION.md`](docs/VOICE_COMPANION.md).
 - **Arm / Fire** — Right-click to arm with a spoken cue line, then `F` (or LCXL side-LEFT) to fire every armed preset at once.
 
 ## Installation
@@ -163,7 +163,7 @@ See [`DESIGN.md`](DESIGN.md) for the design tokens + visual contract; the rest o
 
 ## Testing
 
-310 automated integration tests cover the audio orchestrator, MIDI dispatch, BPM/key analysis pipeline (incl. chroma cache, kick-band pre-emphasis, adaptive IQR, rolling median, unlock-state-machine), announcer queue, key transposition, modulator pool, preset library integrity, and the arm/fire-armed interaction layer.
+348 automated integration tests cover the audio orchestrator, MIDI dispatch, BPM/key analysis pipeline (incl. chroma cache, kick-band pre-emphasis, adaptive IQR, rolling median, unlock-state-machine), announcer queue, key transposition, modulator pool, preset library integrity, the arm/fire-armed interaction layer, and the voice-companion (hardware-detect heuristic, model-URL construction, port fallback, companion-mode fallback chain).
 
 ```bash
 npm test          # one-shot vitest run
@@ -203,7 +203,8 @@ beatweaver/
 │   ├── presets/index.js  32 presets × {bank, col, row, cue, fire, …}
 │   ├── ui/               React components (PresetGrid, VuMeter, …)
 │   └── styles/index.css  Tailwind + CSS custom properties
-├── tests/integration/    Vitest suites (310 tests across 9 files)
+├── tests/integration/    Vitest suites (348 tests across 12 files)
+├── voice-companion/      Bundled offline neural TTS (Piper) — child process
 ├── design/               Brand source-of-truth (SVG, tokens, palette spec)
 └── scripts/              Build helpers (icon generator)
 ```

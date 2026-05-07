@@ -349,6 +349,9 @@ describe('Announcer', () => {
         ttsMode: 'browser',
         koboldAvailable: false,
         koboldUrl: 'http://fake-kobold:5001',
+        companionAvailable: null,
+        companionReady: false,
+        companionUrl: 'http://127.0.0.1:17321',
         volume: 0.8,
         pitch: 1.15,
         rate: 1.3,
@@ -485,6 +488,165 @@ describe('Announcer', () => {
 
       expect(announcer.queue).toEqual([]);
       expect(announcer.speaking).toBe(false);
+    });
+  });
+
+  describe('companion TTS mode', () => {
+    it('initializes companion fields with sensible defaults', () => {
+      const a = new Announcer();
+      expect(a.companionUrl).toBe('http://127.0.0.1:17321');
+      expect(a.companionAvailable).toBeNull();
+      expect(a.companionReady).toBe(false);
+    });
+
+    it('setTTSMode accepts companion as a valid mode', () => {
+      announcer.setTTSMode('companion');
+      expect(announcer.ttsMode).toBe('companion');
+    });
+
+    it('setTTSMode still accepts kobold and browser', () => {
+      announcer.setTTSMode('kobold');
+      expect(announcer.ttsMode).toBe('kobold');
+      announcer.setTTSMode('browser');
+      expect(announcer.ttsMode).toBe('browser');
+    });
+
+    it('setTTSMode rejects unknown modes and keeps the previous one', () => {
+      announcer.setTTSMode('companion');
+      announcer.setTTSMode('hologram');
+      expect(announcer.ttsMode).toBe('companion');
+    });
+
+    it('getState exposes companion availability + readiness + URL', () => {
+      announcer.companionAvailable = true;
+      announcer.companionReady = true;
+      const state = announcer.getState();
+      expect(state.companionAvailable).toBe(true);
+      expect(state.companionReady).toBe(true);
+      expect(state.companionUrl).toBe('http://127.0.0.1:17321');
+    });
+
+    it('_testCompanion sets unavailable when fetch rejects', async () => {
+      const originalFetch = globalThis.fetch;
+      globalThis.fetch = vi.fn(() => Promise.reject(new Error('ECONNREFUSED')));
+      vi.useRealTimers();
+      try {
+        await announcer._testCompanion();
+        expect(announcer.companionAvailable).toBe(false);
+        expect(announcer.companionReady).toBe(false);
+      } finally {
+        globalThis.fetch = originalFetch;
+        vi.useFakeTimers();
+      }
+    });
+
+    it('_testCompanion records ready=true when health endpoint reports ready', async () => {
+      const originalFetch = globalThis.fetch;
+      globalThis.fetch = vi.fn(() =>
+        Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ ok: true, ready: true, phase: 'ready' }),
+        })
+      );
+      vi.useRealTimers();
+      try {
+        await announcer._testCompanion();
+        expect(announcer.companionAvailable).toBe(true);
+        expect(announcer.companionReady).toBe(true);
+      } finally {
+        globalThis.fetch = originalFetch;
+        vi.useFakeTimers();
+      }
+    });
+
+    it('_testCompanion records ready=false when setup is still in progress', async () => {
+      const originalFetch = globalThis.fetch;
+      globalThis.fetch = vi.fn(() =>
+        Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ ok: true, ready: false, phase: 'downloading-voice' }),
+        })
+      );
+      vi.useRealTimers();
+      try {
+        await announcer._testCompanion();
+        expect(announcer.companionAvailable).toBe(true);
+        expect(announcer.companionReady).toBe(false);
+      } finally {
+        globalThis.fetch = originalFetch;
+        vi.useFakeTimers();
+      }
+    });
+
+    it('_speakCompanion falls back to browser TTS on companion error', async () => {
+      const originalFetch = globalThis.fetch;
+      globalThis.fetch = vi.fn(() =>
+        Promise.resolve({ ok: false, status: 500 })
+      );
+      vi.useRealTimers();
+      try {
+        announcer.setTTSMode('companion');
+        const browserSpy = vi.spyOn(announcer, '_speakBrowser').mockResolvedValue();
+        await announcer._speakCompanion('test cue');
+        expect(browserSpy).toHaveBeenCalledWith('test cue');
+        // Non-503 marks the companion unavailable so we don't keep poking it
+        expect(announcer.companionAvailable).toBe(false);
+      } finally {
+        globalThis.fetch = originalFetch;
+        vi.useFakeTimers();
+      }
+    });
+
+    it('_speakCompanion preserves availability on 503 (still booting)', async () => {
+      const originalFetch = globalThis.fetch;
+      globalThis.fetch = vi.fn(() =>
+        Promise.resolve({ ok: false, status: 503 })
+      );
+      vi.useRealTimers();
+      try {
+        announcer.companionAvailable = true; // pretend health passed earlier
+        const browserSpy = vi.spyOn(announcer, '_speakBrowser').mockResolvedValue();
+        await announcer._speakCompanion('test');
+        expect(browserSpy).toHaveBeenCalled();
+        // 503 = setup not done; don't kill availability — companion may
+        // come up momentarily once the model finishes downloading.
+        expect(announcer.companionAvailable).toBe(true);
+      } finally {
+        globalThis.fetch = originalFetch;
+        vi.useFakeTimers();
+      }
+    });
+
+    it('setCompanionUrl updates URL and re-tests', async () => {
+      const originalFetch = globalThis.fetch;
+      globalThis.fetch = vi.fn(() =>
+        Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ ok: true, ready: true }),
+        })
+      );
+      vi.useRealTimers();
+      try {
+        const result = await announcer.setCompanionUrl('http://127.0.0.1:17322');
+        expect(announcer.companionUrl).toBe('http://127.0.0.1:17322');
+        expect(result).toBe(true);
+      } finally {
+        globalThis.fetch = originalFetch;
+        vi.useFakeTimers();
+      }
+    });
+
+    it('setCompanionUrl falls back to default when given empty string', async () => {
+      const originalFetch = globalThis.fetch;
+      globalThis.fetch = vi.fn(() => Promise.reject(new Error('no')));
+      vi.useRealTimers();
+      try {
+        await announcer.setCompanionUrl('');
+        expect(announcer.companionUrl).toBe('http://127.0.0.1:17321');
+      } finally {
+        globalThis.fetch = originalFetch;
+        vi.useFakeTimers();
+      }
     });
   });
 });
