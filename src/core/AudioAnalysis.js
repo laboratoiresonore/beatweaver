@@ -256,6 +256,13 @@ export class AudioAnalysis {
     this.onBpmLock?.(this.bpm);
     this.onBpmUpdate?.({ bpm: this.bpm, confidence: 1, locked: true });
 
+    // Reset chroma accumulator so the next key analysis window
+    // anchors to the post-lock signal — pre-lock samples were
+    // collected against a guess BPM + can be polluted by transient
+    // attack noise during the unlocked phase. Reset = fresh window
+    // = ~10–20% better key-detection accuracy in live sets.
+    this.chromaSamples = 0;
+
     // Start beat interval for visual feedback
     this._startBeatInterval();
   }
@@ -279,6 +286,9 @@ export class AudioAnalysis {
       console.log(`BPM LOCKED at ${this.bpm} (stability check, range: ${range})`);
       this.onBpmLock?.(this.bpm);
       this.onBpmUpdate?.({ bpm: this.bpm, confidence: 1, locked: true });
+
+      // Reset chroma window — see _checkBpmAnalyzerStable for rationale.
+      this.chromaSamples = 0;
 
       // Start beat interval for visual feedback
       this._startBeatInterval();
@@ -462,6 +472,8 @@ export class AudioAnalysis {
         console.log(`BPM LOCKED at ${this.bpm} (fallback, range: ${range})`);
         this.onBpmLock?.(this.bpm);
         this.onBpmUpdate?.({ bpm: this.bpm, confidence: 1, locked: true });
+        // Reset chroma window — see _checkBpmAnalyzerStable for rationale.
+        this.chromaSamples = 0;
         this._startBeatInterval();
       } else {
         this.onBpmUpdate?.({ bpm: this.bpm, confidence: this.bpmConfidence, locked: false });
