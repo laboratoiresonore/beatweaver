@@ -256,6 +256,102 @@ describe('BPM Lock', () => {
     });
   });
 
+  // ──────────────────────────────────────────────────────────
+  // 2026-05-06 audit-driven improvements: adaptive IQR threshold,
+  // rolling median during accumulation, chromaSamples reset on
+  // BPM lock. Each block pins the new contract so future
+  // refactors don't quietly regress the audit work.
+  // ──────────────────────────────────────────────────────────
+  describe('adaptive IQR multiplier (audit punch-list #9)', () => {
+    it('uses 2.0× multiplier in cold-start (<3 candidates)', () => {
+      // Cold-start regime: lenient outlier acceptance so we don't
+      // throw away beats during the first few measurements.
+      analysis.bpmCandidates = [];   // 0 candidates → cold-start
+      analysis.bpmConfidence = 0;
+      // Tight cluster around 120 BPM (500 ms intervals) plus one
+      // wide outlier at 750 ms — the 2.0× multiplier should
+      // accept the outlier (the 1.5× pre-fix would too, this
+      // mostly sets a baseline for the next two tests).
+      analysis.beatTimes = [500, 500, 500, 500, 500, 750];
+      analysis._calculateFallbackBpm();
+      // Must produce SOME BPM (didn't fully reject the input).
+      expect(analysis.bpm).toBeGreaterThan(0);
+    });
+
+    it('uses 1.0× multiplier when bpmConfidence > 0.7 (tight)', () => {
+      // Locked-in regime: tighter acceptance so live-DJ-scratch
+      // outliers don't pollute the median.
+      analysis.bpmCandidates = [128, 128, 128, 128, 128, 128];
+      analysis.bpmConfidence = 0.85;
+      // 500 ms cluster + one big outlier at 800 ms. With 1.5×
+      // (pre-fix) the outlier landed inside the IQR window and
+      // dragged the average; with 1.0× (new) it's rejected.
+      analysis.beatTimes = [500, 500, 500, 500, 500, 500, 800];
+      const bpmBefore = analysis.bpm;
+      analysis._calculateFallbackBpm();
+      // The new IQR multiplier rejects the wider outlier so the
+      // computed BPM stays close to 120 (60000/500=120) rather
+      // than drifting toward 100 (60000/600=100).
+      expect(analysis.bpm).toBeGreaterThanOrEqual(115);
+    });
+  });
+
+  describe('rolling median during accumulation (audit punch-list #2)', () => {
+    it('surfaces median (not raw) BPM when ≥3 candidates exist', () => {
+      // 4 candidates so far: three at 128 + one outlier at 110.
+      // Pre-fix the public ``bpm`` field would have surfaced the
+      // raw single-frame ``detectedBpm`` (whatever this call
+      // computes — probably ~120 from the new beats below).
+      // Post-fix it surfaces the rolling median across all 5
+      // accumulated candidates (the new one + the four prior).
+      analysis.bpmCandidates = [128, 128, 128, 110];
+      analysis.beatTimes = [500, 500, 500, 500];   // 120 BPM raw
+      analysis._calculateFallbackBpm();
+      // bpmCandidates becomes [128, 128, 128, 110, 120].
+      // Sorted: [110, 120, 128, 128, 128]. Median = 128.
+      // (This is the audit-driven smoothness — the live UI
+      // reading sticks at 128 instead of bouncing to 120 just
+      // because one fresh beat-interval frame happened to be
+      // shorter.)
+      expect(analysis.bpm).toBe(128);
+    });
+
+    it('falls back to raw detectedBpm with <3 candidates', () => {
+      analysis.bpmCandidates = [];
+      analysis.beatTimes = [500, 500, 500, 500];   // 120 BPM raw
+      analysis._calculateFallbackBpm();
+      // Only 1 candidate now — too few for rolling median, surface
+      // the raw value.
+      expect(analysis.bpm).toBe(120);
+    });
+  });
+
+  describe('chroma reset on BPM lock (audit punch-list #1)', () => {
+    it('zeroes chromaSamples when stability check locks', () => {
+      analysis.chromaSamples = 250;   // mid-window
+      analysis.bpmCandidates =
+        [128, 128, 128, 128, 128, 128, 128, 128, 128, 128];
+      analysis._checkBpmStability();
+      expect(analysis.bpmLocked).toBe(true);
+      // Audit fix: window resets so the next key-analysis cycle
+      // starts fresh on post-lock chroma samples.
+      expect(analysis.chromaSamples).toBe(0);
+    });
+
+    it('zeroes chromaSamples when fallback path locks', () => {
+      analysis.fallbackMode = true;
+      analysis.chromaSamples = 180;
+      // Build the lock condition: enough candidates, all
+      // identical, range below threshold.
+      for (let i = 0; i < analysis.MIN_BPM_CANDIDATES + 2; i++) {
+        analysis.beatTimes = [500, 500, 500, 500];
+        analysis._calculateFallbackBpm();
+      }
+      expect(analysis.bpmLocked).toBe(true);
+      expect(analysis.chromaSamples).toBe(0);
+    });
+  });
+
   describe('state', () => {
     it('getState reflects lock status', () => {
       const before = analysis.getState();
