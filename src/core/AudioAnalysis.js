@@ -700,22 +700,48 @@ export class AudioAnalysis {
 
   _calculateChroma(frequencyData) {
     const chroma = new Array(12).fill(0);
-    const sampleRate = this.audioContext.sampleRate;
     const binCount = frequencyData.length;
-    const binWidth = sampleRate / (binCount * 2);
 
-    for (let i = 1; i < binCount; i++) {
-      const freq = i * binWidth;
-      if (freq < 60 || freq > 2000) continue;
+    // Build the bin → pitch-class mapping once and cache it on
+    // the instance. Pre-fix this loop computed Math.log2 + round
+    // + modulo on every bin every analysis tick — at FFT 4096 +
+    // 20 Hz key-detection cadence that's ~40 k log2 calls/sec.
+    // After: per-call cost is two Int8Array lookups per bin and
+    // an inline `if (pc < 0) continue` test. Cache key includes
+    // sampleRate so the lookup rebuilds if the AudioContext rate
+    // ever changes (e.g. user toggles a device with a different
+    // native rate).
+    const sampleRate = this.audioContext.sampleRate;
+    if (this._chromaPitchClasses === undefined
+        || this._chromaPitchClassesBinCount !== binCount
+        || this._chromaPitchClassesRate !== sampleRate) {
+      const binWidth = sampleRate / (binCount * 2);
+      // -1 sentinel = "skip this bin" (out of band or sub-MIDI-0).
+      const pcs = new Int8Array(binCount);
+      for (let i = 0; i < binCount; i++) {
+        const freq = i * binWidth;
+        if (i < 1 || freq < 60 || freq > 2000) {
+          pcs[i] = -1;
+          continue;
+        }
+        const midiNote = 12 * Math.log2(freq / 440) + 69;
+        const pitchClass = Math.round(midiNote) % 12;
+        pcs[i] = (pitchClass >= 0 && pitchClass < 12) ? pitchClass : -1;
+      }
+      this._chromaPitchClasses = pcs;
+      this._chromaPitchClassesBinCount = binCount;
+      this._chromaPitchClassesRate = sampleRate;
+    }
+
+    const pcs = this._chromaPitchClasses;
+    for (let i = 0; i < binCount; i++) {
+      const pc = pcs[i];
+      if (pc < 0) continue;
 
       const amplitude = frequencyData[i] / 255;
       if (amplitude < 0.1) continue;
 
-      const midiNote = 12 * Math.log2(freq / 440) + 69;
-      const pitchClass = Math.round(midiNote) % 12;
-      if (pitchClass >= 0 && pitchClass < 12) {
-        chroma[pitchClass] += amplitude * amplitude;
-      }
+      chroma[pc] += amplitude * amplitude;
     }
 
     return chroma;
