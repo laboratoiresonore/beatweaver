@@ -6,7 +6,7 @@ coexist in the codebase:
 | Palette | Where it lives | When it's active |
 |---|---|---|
 | **Pioneer DJ Pro** | `tailwind.config.js`, `--color-*` in `src/styles/index.css` | Shipping default (always) |
-| **2026-04-30 design handoff** | `--hf-*` reference vars in `src/styles/index.css`; full source in `_dev_docs/design_handoff_beatweaver/Beatweaver.html` | Reference for the [issue #3](https://github.com/laboratoiresonore/beatweaver/issues/3) UI rebuild — opt in by adding `class="theme-handoff"` on `<body>` |
+| **Design handoff (preview)** | `--hf-*` reference vars in `src/styles/index.css` | Reference for the [issue #3](https://github.com/laboratoiresonore/beatweaver/issues/3) UI rebuild — opt in by adding `class="theme-handoff"` on `<body>` |
 
 The Pioneer palette is the ship-quality theme inspired by the CDJ-3000 /
 DJM-V10 / rekordbox 7 hardware and software. The handoff palette is the
@@ -62,8 +62,8 @@ Fonts: `JetBrains Mono` (display, BPM, key, numerics), `Inter` (body).
 
 ## Design-handoff palette (reference)
 
-Defined as `--hf-*` so components ported from
-`_dev_docs/design_handoff_beatweaver/` can reference them directly.
+Defined as `--hf-*` so components ported from the design preview can
+reference them directly during the [issue #3](https://github.com/laboratoiresonore/beatweaver/issues/3) UI rebuild.
 
 ```css
 --hf-bg:           #06070A;

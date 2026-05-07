@@ -159,7 +159,7 @@ BeatWeaver **only analyzes** your DJ mix for BPM/key detection. It outputs its s
 - **WebMIDI API** — Direct Launch Control XL access (no driver)
 - **Zustand** — State (where component-local hooks aren't enough)
 
-See `CLAUDE.md` for the full system architecture, MIDI mapping, and synth/preset details.
+See [`DESIGN.md`](DESIGN.md) for the design tokens + visual contract; the rest of the architecture is best read directly from `src/core/Beatweaver.js` (the single React-facing orchestrator).
 
 ## Testing
 
@@ -183,9 +183,7 @@ The brand source-of-truth lives in [`design/`](design/):
 - `design/colors.md` — Palette spec with hex, oklch, contrast ratios, and per-color usage
 - `design/icons/{bass,energy,texture,fx,fire}.svg` — Category & UI glyphs
 
-The hi-fi static prototype that drove the visual rebuild lives at
-[`_dev_docs/design_handoff_beatweaver/`](_dev_docs/design_handoff_beatweaver/).
-Issue #3 tracks the remaining production port.
+See [`DESIGN.md`](DESIGN.md) for the full visual contract — palette, design tokens, and brand asset usage.
 
 ## Project Layout
 
@@ -205,12 +203,40 @@ beatweaver/
 │   ├── presets/index.js  32 presets × {bank, col, row, cue, fire, …}
 │   ├── ui/               React components (PresetGrid, VuMeter, …)
 │   └── styles/index.css  Tailwind + CSS custom properties
-├── tests/integration/    Vitest suites (275 tests)
+├── tests/integration/    Vitest suites (310 tests across 9 files)
 ├── design/               Brand source-of-truth (SVG, tokens, palette spec)
-├── _dev_docs/            Design handoff reference (do not import from src/)
 └── scripts/              Build helpers (icon generator)
 ```
+
+## Roadmap
+
+- [ ] **UI rebuild** ([#3](https://github.com/laboratoiresonore/beatweaver/issues/3)) — port the hi-fi handoff design into production. New layout, denser preset grid, live-meter visuals.
+- [ ] **More controllers** — Akai APC mini, Korg nanoKONTROL2 (open an issue if you have hardware to contribute mappings).
+- [ ] **Preset packs** — community-contributable preset bundles (currently the 32 ship with the app).
+- [ ] **Sidechain duck-out** — auto-duck the synth column when the kick on your DJ deck hits, configurable per-preset.
+- [ ] **Phrase memory** — record a 4 / 8 / 16-bar live-fired pattern and replay it on the next downbeat.
+
+## Contributing
+
+Issues and PRs welcome. The codebase is intentionally small — the orchestrator is a single class in `src/core/Beatweaver.js`, so finding-where-to-make-a-change is rarely a hunt.
+
+A few load-bearing constraints to know up front:
+
+- **Audio output is generated only.** Input audio is for analysis only — never re-emit incoming audio. (See `src/core/AudioAnalysis.js`.)
+- **The MIDI controller layer is reactive.** Anything that changes UI state must round-trip through the orchestrator so LED feedback stays in sync.
+- **Tests must pass before merge.** `npm test` is the gate; the 310 tests run in ~3s.
+
+Bug reports — please include OS, audio interface, MIDI device (if any), and the captured detection state from the on-screen analysis panel when the issue occurred.
 
 ## License
 
 MIT — see [LICENSE](LICENSE).
+
+---
+
+<p align="center">
+  <sub>
+    Part of the <a href="https://github.com/laboratoiresonore">Laboratoire Sonore</a> ecosystem of <strong>fully-local, privacy-first creative tools</strong>.<br/>
+    Sister projects: <a href="https://github.com/laboratoiresonore/spellcaster">Spellcaster</a> (image gen) · <a href="https://github.com/laboratoiresonore/ComfyUI-Spellcaster">ComfyUI-Spellcaster</a> (the nodes that drive it)
+  </sub>
+</p>
