@@ -39,35 +39,51 @@ It's a layer on top of your existing DJ rig, not a replacement. Your decks still
 
 ## Installation
 
-### Download Pre-built Release
+<p align="center">
+  <a href="https://github.com/laboratoiresonore/beatweaver/releases/latest"><img src="https://img.shields.io/badge/Windows-Download-7c3aed?style=for-the-badge&logo=windows&logoColor=white" alt="Windows installer"/></a>
+  &nbsp;
+  <a href="https://github.com/laboratoiresonore/beatweaver/releases/latest"><img src="https://img.shields.io/badge/macOS-Download-7c3aed?style=for-the-badge&logo=apple&logoColor=white" alt="macOS zip"/></a>
+  &nbsp;
+  <a href="https://github.com/laboratoiresonore/beatweaver/releases/latest"><img src="https://img.shields.io/badge/Linux-Download-7c3aed?style=for-the-badge&logo=linux&logoColor=white" alt="Linux AppImage"/></a>
+</p>
 
-1. Go to [Releases](https://github.com/laboratoiresonore/beatweaver/releases)
-2. Download the version for your platform:
-   - **Mac**: `Beatweaver-x.x.x-mac.zip` (Intel & Apple Silicon)
-   - **Windows**: `Beatweaver-x.x.x-win.exe`
-   - **Linux**: `Beatweaver-x.x.x.AppImage`
+<p align="center">
+  <a href="https://github.com/laboratoiresonore/beatweaver/releases"><img alt="Latest release" src="https://img.shields.io/github/v/release/laboratoiresonore/beatweaver?color=7c3aed&label=latest&style=flat"/></a>
+  <a href="https://github.com/laboratoiresonore/beatweaver/releases/latest"><img alt="Total downloads" src="https://img.shields.io/github/downloads/laboratoiresonore/beatweaver/total?color=7c3aed&style=flat"/></a>
+</p>
+
+The badges above always point to the latest release. Pick the file for your platform from the assets list:
+
+| Platform | File pattern | Notes |
+|---|---|---|
+| **Windows** (x64) | `Beatweaver.Setup.<version>.exe` | NSIS installer; double-click to install |
+| **macOS Intel** | `Beatweaver-<version>-mac.zip` | Unzip, drag `Beatweaver.app` to Applications |
+| **macOS Apple Silicon** | `Beatweaver-<version>-arm64-mac.zip` | Native M1/M2/M3 build |
+| **Linux** (x64) | `Beatweaver-<version>.AppImage` | `chmod +x` then run |
 
 ### Mac Installation
 
-1. Download `Beatweaver-x.x.x-mac.zip`
+1. Download the right zip — `mac.zip` for Intel, `arm64-mac.zip` for Apple Silicon (M1/M2/M3)
 2. Unzip the file
 3. Drag `Beatweaver.app` to your Applications folder
 4. **First launch**: Right-click the app and select "Open" (required for unsigned apps)
 5. Click "Open" in the security dialog
 
-> **Note**: Since the app isn't signed with an Apple Developer certificate, macOS Gatekeeper will warn you the first time. This is normal for open-source apps.
+> **Note**: Since the app isn't signed with an Apple Developer certificate, macOS Gatekeeper will warn you the first time. This is normal for open-source apps. If Gatekeeper still refuses after right-click → Open, run `xattr -cr /Applications/Beatweaver.app` in Terminal.
 
 ### Windows Installation
 
-1. Download `Beatweaver-x.x.x-win.exe`
-2. Run the installer
+1. Download `Beatweaver.Setup.<version>.exe`
+2. Run the installer (Windows SmartScreen may warn — click "More info" → "Run anyway", same reason as macOS Gatekeeper)
 3. Follow the installation prompts
 
 ### Linux Installation
 
-1. Download `Beatweaver-x.x.x.AppImage`
+1. Download `Beatweaver-<version>.AppImage`
 2. Make it executable: `chmod +x Beatweaver-*.AppImage`
 3. Run: `./Beatweaver-*.AppImage`
+
+> **Optional**: integrate the AppImage with your menu via [AppImageLauncher](https://github.com/TheAssassin/AppImageLauncher) — first launch will offer to register a desktop entry.
 
 ## Build from Source
 
