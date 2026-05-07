@@ -349,4 +349,96 @@ describe('Key Detection (AudioAnalysis)', () => {
       expect(state.keyConfidence).toBe(1);
     });
   });
+
+  // ──────────────────────────────────────────────────────────
+  // _calculateChroma: pre-computes a bin→pitch-class lookup table
+  // and caches it on the instance keyed by (binCount, sampleRate).
+  // These tests pin: cache build correctness, in-band/out-of-band
+  // bins, sample-rate change rebuild, and amplitude squaring.
+  // ──────────────────────────────────────────────────────────
+  describe('_calculateChroma', () => {
+    function _setupAudioContext(rate, binCount) {
+      analysis.audioContext = { sampleRate: rate };
+      // Force a fresh cache build by clearing existing cached state.
+      analysis._chromaPitchClasses = undefined;
+      analysis._chromaPitchClassesBinCount = undefined;
+      analysis._chromaPitchClassesRate = undefined;
+    }
+
+    it('returns a 12-element chroma vector', () => {
+      _setupAudioContext(44100, 2048);
+      const freq = new Uint8Array(2048);
+      const result = analysis._calculateChroma(freq);
+      expect(result).toHaveLength(12);
+      // All zero — no audio energy in any bin.
+      expect(result.every(v => v === 0)).toBe(true);
+    });
+
+    it('caches the pitch-class table on first call', () => {
+      _setupAudioContext(44100, 2048);
+      expect(analysis._chromaPitchClasses).toBeUndefined();
+      analysis._calculateChroma(new Uint8Array(2048));
+      expect(analysis._chromaPitchClasses).toBeDefined();
+      expect(analysis._chromaPitchClasses.length).toBe(2048);
+      expect(analysis._chromaPitchClassesBinCount).toBe(2048);
+      expect(analysis._chromaPitchClassesRate).toBe(44100);
+    });
+
+    it('rebuilds cache when sample rate changes', () => {
+      _setupAudioContext(44100, 2048);
+      analysis._calculateChroma(new Uint8Array(2048));
+      const firstTable = analysis._chromaPitchClasses;
+      // Switch to a different sample-rate device.
+      analysis.audioContext = { sampleRate: 48000 };
+      analysis._calculateChroma(new Uint8Array(2048));
+      expect(analysis._chromaPitchClasses).not.toBe(firstTable);
+      expect(analysis._chromaPitchClassesRate).toBe(48000);
+    });
+
+    it('marks bins below 60 Hz as out-of-band (sentinel -1)', () => {
+      _setupAudioContext(44100, 2048);
+      analysis._calculateChroma(new Uint8Array(2048));
+      // bin 0 is the DC bin; bins under ~60 Hz at 44.1kHz/4096-fft
+      // (binWidth = 44100/4096 ≈ 10.77 Hz/bin) are bins 0..5 → all -1.
+      expect(analysis._chromaPitchClasses[0]).toBe(-1);
+      expect(analysis._chromaPitchClasses[1]).toBe(-1);
+      expect(analysis._chromaPitchClasses[5]).toBe(-1);
+    });
+
+    it('marks bins above 2000 Hz as out-of-band', () => {
+      _setupAudioContext(44100, 2048);
+      analysis._calculateChroma(new Uint8Array(2048));
+      // 2 kHz / 10.77 Hz/bin ≈ bin 186; bins >186 should be -1.
+      expect(analysis._chromaPitchClasses[1500]).toBe(-1);
+      expect(analysis._chromaPitchClasses[2000]).toBe(-1);
+    });
+
+    it('amplitude < 0.1 is skipped (low-energy gate)', () => {
+      _setupAudioContext(44100, 2048);
+      // Bin 41 ≈ 441 Hz ≈ A4 (pitch class 9). Amplitude 0.05 → 12.75
+      // bytes (rounded to 12). 12/255 ≈ 0.047 < 0.1 → skipped.
+      const freq = new Uint8Array(2048);
+      freq[41] = 12;
+      const chroma = analysis._calculateChroma(freq);
+      expect(chroma.every(v => v === 0)).toBe(true);
+    });
+
+    it('amplitude > 0.1 contributes squared energy to its pitch class', () => {
+      _setupAudioContext(44100, 2048);
+      // bin 41 ≈ 441 Hz ≈ A4 (pitch class 9).
+      // amplitude 0.5 → 127 bytes. 127/255 ≈ 0.498. Squared ≈ 0.248.
+      const freq = new Uint8Array(2048);
+      freq[41] = 127;
+      const chroma = analysis._calculateChroma(freq);
+      // Whichever pitch class bin 41 maps to should be the only
+      // non-zero entry (others stay at 0).
+      const nonZero = chroma.findIndex(v => v > 0);
+      expect(nonZero).toBeGreaterThanOrEqual(0);
+      // Energy is amplitude², so the exact value should be ~0.248.
+      expect(chroma[nonZero]).toBeCloseTo(0.248, 2);
+      // All other classes empty.
+      const others = chroma.filter((_, i) => i !== nonZero);
+      expect(others.every(v => v === 0)).toBe(true);
+    });
+  });
 });
