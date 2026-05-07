@@ -1,6 +1,6 @@
 {
   "name": "beatweaver",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "DJ tool for users with NO musical theory knowledge",
   "main": "electron/main.js",
   "scripts": {
