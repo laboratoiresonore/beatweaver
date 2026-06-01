@@ -51,6 +51,8 @@ export default defineConfig({
   server: {
     port: 5173,
     strictPort: true,
+    // Allow tunnel hostnames (cloudflare, etc.) to connect
+    allowedHosts: 'all',
     headers: {
       // CSP that allows blob workers for BPM analyzer
       'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob:; style-src 'self' 'unsafe-inline'; media-src 'self' blob: data:; worker-src 'self' blob:; connect-src *",
