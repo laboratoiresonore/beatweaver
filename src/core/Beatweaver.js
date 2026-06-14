@@ -1303,8 +1303,8 @@ export class Beatweaver {
   }
 
   /**
-   * Set TTS mode - user chooses Kobold or Browser
-   * @param {'browser' | 'kobold'} mode
+   * Set TTS mode - user chooses Kobold, Companion, or Browser
+   * @param {'browser' | 'kobold' | 'companion'} mode
    */
   setTTSMode(mode) {
     this.announcer.setTTSMode(mode);
@@ -1312,10 +1312,25 @@ export class Beatweaver {
 
   /**
    * Get current TTS mode
-   * @returns {'browser' | 'kobold'}
+   * @returns {'browser' | 'kobold' | 'companion'}
    */
   getTTSMode() {
     return this.announcer.getTTSMode();
+  }
+
+  /**
+   * Re-test the bundled voice companion's /health endpoint. Called after the
+   * renderer asks Electron main to start the companion subprocess, so the
+   * Announcer learns about it being live without waiting for init.
+   */
+  async refreshCompanionAvailability() {
+    if (typeof this.announcer._testCompanion === 'function') {
+      await this.announcer._testCompanion();
+    }
+    return {
+      available: this.announcer.companionAvailable,
+      ready: this.announcer.companionReady,
+    };
   }
 
   /**
@@ -1549,7 +1564,21 @@ export class Beatweaver {
 
     this._vuMeterEnabled = true;
 
-    // Update VU meter every 50ms
+    // Track which LED state each of the 4 RowC knobs is currently
+    // showing, so we only re-send a SysEx command when the state
+    // CHANGES. Pre-fix the loop blasted 4× setKnobRowCLED on every
+    // 50 ms tick whether the level was steady or not — that's
+    // 80 SysEx events/sec to the controller for a static signal,
+    // which is harmless on a normal LCXL but drives MIDI buffer
+    // underruns when LCXL is daisy-chained behind another USB MIDI
+    // device.
+    const lastLedColor = [-1, -1, -1, -1]; // index 0..3 → -1 = unknown
+
+    // Update VU meter every 100 ms (was 50 ms — that's an
+    // imperceptibly higher refresh rate for a 4-LED indicator + it
+    // halves the SysEx traffic to the controller AND the
+    // getByteFrequencyData() FFT cost on the renderer thread).
+    // 100 ms = 10 fps which still feels live for a peak meter.
     this._vuMeterInterval = setInterval(() => {
       if (!this._vuMeterEnabled || !this.midiController.isConnected()) {
         this._stopVuMeter();
@@ -1578,9 +1607,9 @@ export class Beatweaver {
 
       for (let i = 0; i < 4; i++) {
         const knobIndex = 4 + i; // Row C indices 4-7
+        let color;
         if (i < numLit) {
           // Color based on level position: green -> yellow -> red
-          let color;
           if (i < 2) {
             color = lcxl.LED_GREEN;
           } else if (i < 3) {
@@ -1588,12 +1617,16 @@ export class Beatweaver {
           } else {
             color = lcxl.LED_RED;
           }
-          this.midiController.setKnobRowCLED(knobIndex, color);
         } else {
-          this.midiController.setKnobRowCLED(knobIndex, lcxl.LED_OFF);
+          color = lcxl.LED_OFF;
+        }
+        // Only push a SysEx if the colour changed since last tick.
+        if (lastLedColor[i] !== color) {
+          this.midiController.setKnobRowCLED(knobIndex, color);
+          lastLedColor[i] = color;
         }
       }
-    }, 50);
+    }, 100);
   }
 
   /**

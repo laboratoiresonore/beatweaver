@@ -2,13 +2,14 @@ const { app, BrowserWindow, ipcMain } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const os = require('os');
-const { execFile } = require('child_process');
+const { execFile, fork } = require('child_process');
 const Store = require('electron-store');
 
 let store;
 const isDev = process.env.NODE_ENV !== 'production' || !app.isPackaged;
 
 let mainWindow;
+let voiceCompanion = null; // child process holding the Piper TTS HTTP server
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -113,17 +114,102 @@ ipcMain.handle('tts:synthesize', async (_, text, options = {}) => {
 });
 }
 
+/**
+ * Spawn the bundled voice-companion as a Node child process if the user has
+ * opted in (settings.ttsMode === 'companion'). The companion runs an HTTP
+ * server on 127.0.0.1:17321 and the renderer talks to it via Announcer.js.
+ *
+ * Resolves the entry script via two paths:
+ *   - Dev: <repo>/voice-companion/src/server.js  (running from source tree)
+ *   - Packaged: process.resourcesPath/voice-companion/src/server.js
+ *     (electron-builder copies the directory via extraResources)
+ */
+function startVoiceCompanion() {
+  if (voiceCompanion) return; // already running, don't double-start
+
+  const entry = isDev
+    ? path.join(__dirname, '..', 'voice-companion', 'src', 'server.js')
+    : path.join(process.resourcesPath, 'voice-companion', 'src', 'server.js');
+
+  if (!fs.existsSync(entry)) {
+    console.warn(`[voice-companion] entry not found: ${entry} — companion mode unavailable`);
+    return;
+  }
+
+  const dataRoot = path.join(app.getPath('userData'), 'voice');
+
+  try {
+    voiceCompanion = fork(entry, [], {
+      env: {
+        ...process.env,
+        BEATWEAVER_VOICE_DATA: dataRoot,
+      },
+      stdio: ['ignore', 'pipe', 'pipe', 'ipc'],
+    });
+    voiceCompanion.stdout?.on('data', (chunk) => {
+      process.stdout.write(`[voice-companion] ${chunk}`);
+    });
+    voiceCompanion.stderr?.on('data', (chunk) => {
+      process.stderr.write(`[voice-companion err] ${chunk}`);
+    });
+    voiceCompanion.on('exit', (code) => {
+      console.log(`[voice-companion] exited with code ${code}`);
+      voiceCompanion = null;
+    });
+  } catch (err) {
+    console.warn('[voice-companion] failed to spawn:', err.message);
+    voiceCompanion = null;
+  }
+}
+
+function stopVoiceCompanion() {
+  if (!voiceCompanion) return;
+  try {
+    voiceCompanion.kill();
+  } catch {
+    // already gone, fine
+  }
+  voiceCompanion = null;
+}
+
 // App lifecycle
 app.whenReady().then(() => {
   store = new Store();
   setupIpcHandlers();
   createWindow();
+
+  // Auto-start companion if the user has chosen it as their TTS mode.
+  // Otherwise stay dormant — no point burning RAM on a Piper subprocess
+  // for a user who runs Kobold or browser TTS.
+  if (store.get('ttsMode') === 'companion') {
+    startVoiceCompanion();
+  }
 });
 
+// IPC for renderer to ask main to start/stop the companion when the user
+// switches TTS mode in Settings.
+ipcMain.handle('voice-companion:start', () => {
+  startVoiceCompanion();
+  return Boolean(voiceCompanion);
+});
+ipcMain.handle('voice-companion:stop', () => {
+  stopVoiceCompanion();
+  return true;
+});
+ipcMain.handle('voice-companion:status', () => ({
+  running: Boolean(voiceCompanion),
+  pid: voiceCompanion?.pid ?? null,
+}));
+
 app.on('window-all-closed', () => {
+  stopVoiceCompanion();
   if (process.platform !== 'darwin') {
     app.quit();
   }
+});
+
+app.on('before-quit', () => {
+  stopVoiceCompanion();
 });
 
 app.on('activate', () => {

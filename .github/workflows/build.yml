@@ -81,6 +81,14 @@ jobs:
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/v')
 
+    # softprops/action-gh-release needs `contents: write` to create the
+    # release entry + upload assets. The default GITHUB_TOKEN scope on
+    # public repos is read-only, so v0.2.0's first run failed at "Create
+    # Release" with HTTP 403. Locally-scoping the elevated permission to
+    # this job (instead of workflow-wide) follows least-privilege.
+    permissions:
+      contents: write
+
     steps:
       - name: Download all artifacts
         uses: actions/download-artifact@v4
@@ -93,5 +101,11 @@ jobs:
           files: artifacts/**/*
           draft: false
           prerelease: false
+          # Auto-generate notes from commit/PR titles since the previous
+          # tag. v0.2.1's notes were hand-written via API PATCH; this
+          # makes the next release ship with a basic 'What's Changed'
+          # section out of the box. Hand-edits are still possible after
+          # the fact (gh release edit / API PATCH).
+          generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

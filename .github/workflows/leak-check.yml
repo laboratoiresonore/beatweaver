@@ -1,0 +1,42 @@
+# Greps tracked files for forbidden leak patterns (owner identifiers,
+# private LAN IPs, access tokens, internal planning-doc names) and fails
+# the build on any hit.
+#
+# The pattern set is supplied via the LEAK_PATTERNS repo secret
+# (Settings -> Secrets and variables -> Actions) so this PUBLIC workflow
+# file never contains the literal identifiers it scans for -- a leak
+# scanner must not itself leak. Fails loudly if the secret is unset.
+# Self-excludes this file as belt-and-suspenders.
+#
+# Scope note: cross-repo product / sibling-project names are intentionally
+# NOT in the pattern set -- the README legitimately references sibling
+# projects in its install table.
+name: Leak check
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: git grep for forbidden patterns
+        shell: bash
+        env:
+          LEAK_PATTERNS: ${{ secrets.LEAK_PATTERNS }}
+        run: |
+          set -uo pipefail
+          if [ -z "${LEAK_PATTERNS:-}" ]; then
+            echo "::error::LEAK_PATTERNS secret is not set. Add it in Settings -> Secrets and variables -> Actions before this scan can run."
+            exit 1
+          fi
+          if git grep -nIE "$LEAK_PATTERNS" -- ':!.github/workflows/leak-check.yml'; then
+            echo "::error::Forbidden pattern detected in tracked files (see hits above)"
+            exit 1
+          fi
+          echo "Scan clean."

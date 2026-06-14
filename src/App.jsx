@@ -87,9 +87,11 @@ function BeatweaverApp() {
   const [selectedVoice, setSelectedVoice] = useState('');
 
   // TTS mode and Kobold
-  const [ttsMode, setTtsMode] = useState('browser'); // 'browser' or 'kobold'
+  const [ttsMode, setTtsMode] = useState('browser'); // 'browser' | 'kobold' | 'companion'
   const [koboldUrl, setKoboldUrl] = useState('');
   const [koboldAvailable, setKoboldAvailable] = useState(false);
+  const [companionAvailable, setCompanionAvailable] = useState(null); // null=untested
+  const [companionReady, setCompanionReady] = useState(false);
   const [saveStatus, setSaveStatus] = useState('idle');
 
   // Master controls
@@ -625,10 +627,32 @@ function BeatweaverApp() {
     bw.current?.testAnnouncer();
   }, []);
 
-  const handleTtsModeChange = useCallback((mode) => {
+  const handleTtsModeChange = useCallback(async (mode) => {
     setTtsMode(mode);
     if (bw.current) {
       bw.current.setTTSMode(mode);
+
+      // When switching INTO companion mode, ask Electron main to start the
+      // companion subprocess (it stays dormant until needed). When leaving
+      // companion mode, stop it to free the RAM.
+      if (typeof window !== 'undefined' && window.electronAPI?.voiceCompanion) {
+        try {
+          if (mode === 'companion') {
+            await window.electronAPI.voiceCompanion.start();
+            // Re-test after a short delay so the renderer's announcer learns
+            // about the now-running companion.
+            setTimeout(() => {
+              bw.current?.refreshCompanionAvailability?.();
+            }, 500);
+          } else {
+            // Don't kill the companion if the user toggles modes rapidly;
+            // it's cheap to keep around. Only stop on explicit settings save.
+          }
+        } catch (err) {
+          console.warn('voiceCompanion IPC failed:', err);
+        }
+      }
+
       // Test immediately so user hears the change
       setTimeout(() => bw.current?.testAnnouncer(), 100);
     }
@@ -831,6 +855,8 @@ function BeatweaverApp() {
           koboldUrl={koboldUrl}
           onKoboldUrlChange={handleKoboldUrlChange}
           koboldAvailable={koboldAvailable}
+          companionAvailable={companionAvailable}
+          companionReady={companionReady}
           saveStatus={saveStatus}
         />
 

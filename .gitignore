@@ -7,7 +7,7 @@ release/
 
 # Binary archives never tracked (design handoffs etc. arrive as zips
 # but get extracted to _dev_docs/<name>/ for review). Source-of-truth is
-# the extracted tree, not the archive. Whimweaver.zip 2026-04-30 was the
+# the extracted tree, not the archive. Sibling-project zip was the
 # triggering case — tracked once, then moved to _dev_docs/design_handoff_beatweaver/.
 *.zip
 
@@ -17,6 +17,13 @@ gemini-output/
 
 # Claude Code internal files
 .claude/
+
+# Internal dev notes / handoffs / session captures — never published.
+# These directories may exist locally; nothing inside them ships to the
+# public repo. Treat as private engineering scratch.
+CLAUDE.md
+_dev_docs/
+_dev_tools/
 
 # =============================================================================
 # CREDENTIAL SAFETY — defensive against accidental token/PAT commits
