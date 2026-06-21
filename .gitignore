@@ -45,3 +45,5 @@ _dev_tools/
 **/huggingface*token*
 **/anthropic*key*
 **/openai*key*
+
+.vscode/
