@@ -15,6 +15,9 @@ import { synthEngine } from './SynthEngine.js';
 import { getAudioAnalysis } from './AudioAnalysis.js';
 import { getMidiController } from './MidiController.js';
 import { getAnnouncer } from './Announcer.js';
+import { getMusicalAnalysis } from './MusicalAnalysis.js';
+import { Arranger } from './Arranger.js';
+import { SubsystemError } from './SubsystemError.js';
 import { getAllPresets } from '../presets/index.js';
 import { createModulator, knobToModulatorType, getModulatorName, MODULATOR_TYPES } from './SynthFactory.js';
 
@@ -24,7 +27,17 @@ export class Beatweaver {
     this.synthEngine = synthEngine;
     this.midiController = getMidiController();
     this.announcer = getAnnouncer();
-
+    
+    // New subsystems
+    this.musicalAnalysis = getMusicalAnalysis();
+    this.arranger = new Arranger({ bpm: 120, beatsPerBar: 4, stems: [] });
+    
+    // Wire onSectionChange from MusicalAnalysis to trigger onArrangementUpdate
+    this.musicalAnalysis.onSectionChange = (sections) => {
+      this.onSectionChange?.(sections);
+      this._emitArrangementUpdate();
+    };
+    
     this.initialized = false;
     this.activePresets = new Set();
     this.presetBank = 0; // 0 or 1 (16 presets in 2 banks of 8)
@@ -69,6 +82,8 @@ export class Beatweaver {
     this.onBpmAnalysisToggle = null;  // For syncing GUI toggle when MIDI changes it
     this.onKeyAnalysisToggle = null;  // For syncing GUI toggle when MIDI changes it
     this.onAnalyzingChange = null;    // For syncing analysis button when MIDI toggles it
+    this.onSectionChange = null;      // For musical analysis section changes
+    this.onArrangementUpdate = null;  // For arrangement JSON updates after section changes
 
     // VU meter animation
     this._vuMeterInterval = null;
@@ -123,6 +138,37 @@ export class Beatweaver {
 
     this.initialized = true;
     console.log('Beatweaver orchestrator initialized');
+  }
+
+  // ============ ARRANGEMENT METHODS ============
+  /**
+   * Schedule an arrangement event via the arranger
+   * @param {string} stemId - Stem ID to schedule
+   * @param {number} start - Start time in seconds
+   * @param {number} duration - Duration in seconds
+   */
+  scheduleArrangementEvent(stemId, start, duration) {
+    try {
+      this.arranger.addEvent(stemId, start, duration);
+      this._emitArrangementUpdate();
+    } catch (err) {
+      const subsystemError = new SubsystemError(err.message, 'Arranger');
+      console.error('Arrangement error:', subsystemError);
+      this.onError?.(subsystemError);
+    }
+  }
+
+  /**
+   * Emit arrangement update with JSON serialization
+   */
+  _emitArrangementUpdate() {
+    const arrangement = {
+      bpm: this.arranger.bpm,
+      beatsPerBar: this.arranger.beatsPerBar,
+      stems: Array.from(this.arranger.stems.entries()).map(([id, data]) => ({ id, ...data })),
+      events: this.arranger.events,
+    };
+    this.onArrangementUpdate?.(JSON.stringify(arrangement, null, 2));
   }
 
   // ============ AUDIO ANALYSIS WIRING ============
